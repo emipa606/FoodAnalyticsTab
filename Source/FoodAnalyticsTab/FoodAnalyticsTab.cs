@@ -29,8 +29,7 @@ namespace FoodAnalyticsTab
             Help = 2
         }
         private MainTabWindow_Estimator.FoodAnalyticsTab curTab = FoodAnalyticsTab.Graph, prevTab = FoodAnalyticsTab.Analytics;
-        private List<CurveMark> marks = new List<CurveMark>();
-        Vector2 []scrollPos = new Vector2[3] { Vector2.zero, Vector2.zero, Vector2.zero }; // for scrolling view
+        Vector2[] scrollPos = new Vector2[3] { Vector2.zero, Vector2.zero, Vector2.zero }; // for scrolling view
 
         protected float lastUpdate = -1f;
         private int lastUpdateTick = 0;
@@ -38,28 +37,68 @@ namespace FoodAnalyticsTab
         // analytics
         private float totalNeededHay, dailyKibbleConsumption, dailyHayConsumption;
         private int numAnimals, numRoughAnimals, numKibbleAnimals, numHaygrass, numHay, numMeat;
-        private class projectionData
+        private class prediction
         {
             public class MinMax
             {
-                public float min { get; set; }
-                public float max { get; set; }
+                public bool showDeficiency { get; set; } = false;
+                private float _min, _max;
+                public float min
+                {
+                    get { return _min; }
+                    set
+                    {
+                        _min = value;
+                        if (showDeficiency != true && value < 0)
+                        {
+                            _min = 0;
+                        }
+                    }
+                }
+                public float max
+                {
+                    get { return _max; }
+                    set
+                    {
+                        _max = value;
+                        if (showDeficiency != true && value < 0)
+                        {
+                           _max = 0;        
+                        }
+                    }
+                }
             }
-            public projectionData(MinMax a, MinMax b, MinMax c =null, MinMax d = null)
+            private bool _showDeficiency;
+            public bool showDeficiency
+            {
+                get { return _showDeficiency; }
+                set
+                {
+                    _showDeficiency = hay_yield.showDeficiency = hay_stock.showDeficiency = meat_stock.showDeficiency =
+                        animal_population.showDeficiency = hay_consumption.showDeficiency = value;
+                }
+            }
+
+            public prediction(MinMax a, MinMax b, MinMax c =null, MinMax d = null, MinMax e = null)
             {
                 hay_yield = a;
+                hay_consumption = (e == null) ? new MinMax() : e;
                 hay_stock = b;
-                meat_stock = c;
+                meat_stock = (c == null) ? new MinMax() : c;
+                animal_population = (d == null) ? new MinMax() : d;
+                showDeficiency = false;
             }
             public MinMax hay_yield { get; set; }
             public MinMax hay_stock { get; set; }
             public MinMax meat_stock { get; set; }
-        };
-        private static int [] nextNDays = new int[2] { 25, 25 }; // default display 25 days
-        private float[] dayNumSlider_curr = new float[2] { 25, 25 },
-                         dayNumSlider_prev = new float[2] { 25, 25 };
+            public MinMax animal_population { get; set; }
+            public MinMax hay_consumption { get; set; }
 
-        List<projectionData> projectedRecords = new List<projectionData>(); 
+        };
+
+        private static int nextNDays = 25; // default display 25 days
+
+        List<prediction> projectedRecords = new List<prediction>(); 
         private class haygrassGrowth
         {
             public haygrassGrowth(float a, float b)
@@ -87,7 +126,93 @@ namespace FoodAnalyticsTab
             (from d in DefDatabase<ThingDef>.AllDefs.Where(x => x.defName == "PlantHaygrass")
              select d).FirstOrDefault().plant.harvestYield * 0.5f * 0.5f// 1st 0.5 is harvesting at 65% growth, 2nd 0.5 is lowest health.
             );
-        bool showDeficiency;
+
+        private class LineGraph
+        {
+            private List<CurveMark> marks = new List<CurveMark>();
+            private Dictionary<String, SimpleCurveDrawInfo> curves = new Dictionary<String, SimpleCurveDrawInfo>();
+            private SimpleCurveDrawerStyle curveDrawerStyle = new SimpleCurveDrawerStyle();
+
+            public float scrollPos_curr { get; set; }
+            public float scrollPos_prev { get; set; }
+            public bool changed { get { return scrollPos_curr != scrollPos_prev; } }
+            static int min_day = 1, max_day = 60;
+
+            public LineGraph(float default_day)
+            {
+                this.scrollPos_curr = this.scrollPos_prev = default_day;
+                curveDrawerStyle.UseFixedSection = true;
+                curveDrawerStyle.FixedSection = new Vector2(0, scrollPos_curr);
+                curveDrawerStyle.LabelY = "Hay #";
+                curveDrawerStyle.LabelX = "Day";
+                curveDrawerStyle.UseFixedScale = false;
+                curveDrawerStyle.DrawBackground = true; // draw gray background behind graph
+                curveDrawerStyle.DrawBackgroundLines = true; // 
+                curveDrawerStyle.DrawMeasures = true;
+                curveDrawerStyle.MeasureLabelsXCount = (int) this.scrollPos_curr; // number of marks on x axis 
+                curveDrawerStyle.MeasureLabelsYCount = 5;
+                curveDrawerStyle.DrawPoints = false; // draw white points for each data
+                curveDrawerStyle.DrawLegend = true; //
+                curveDrawerStyle.DrawCurveMousePoint = true; // hover over graph shows details
+                curveDrawerStyle.UseAntiAliasedLines = true; // smooth lines
+            }
+            public void SetMarks(float x, string message, Color color)
+            {
+                if (!this.marks.Where(s => s.message == message).Any()) {
+                    this.marks.Add(new CurveMark(x, message, color));
+                    this.marks.Add(new CurveMark(x, message, color)); // fix i++ bug.
+                } else {
+                    foreach (CurveMark m in this.marks.Where(s => s.message == message))
+                    {
+                        m.x = x;
+                    }
+                }
+            }
+            public void SetCurve(String label, Color color, List<float> points)
+            {
+                if (!this.curves.ContainsKey(label))
+                {
+                    this.curves.Add(label, new SimpleCurveDrawInfo());
+                    this.curves[label].color = color;
+                    this.curves[label].label = label;
+                }
+                this.curves[label].curve = new SimpleCurve();
+                for (int day = 0; day < points.Count(); day++)
+                {
+                    this.curves[label].curve.Add(new CurvePoint(day, points[day]));
+                }
+            }
+            public float Draw(Rect rect)
+            {
+                curveDrawerStyle.FixedSection = new Vector2(0, this.scrollPos_curr);
+                curveDrawerStyle.MeasureLabelsXCount = (int)this.scrollPos_curr; // number of marks on x axis 
+
+                Rect graphRect = new Rect(0f, 10f, rect.width * .95f, 450f);
+                Rect legendRect = new Rect(0f, graphRect.yMax, graphRect.width, 40f);
+                Rect sliderRect = new Rect(0, legendRect.yMax, graphRect.width, 50f);
+                Rect rect2 = new Rect(0, 0, graphRect.width, graphRect.height + legendRect.height + sliderRect.height);
+                SimpleCurveDrawer.DrawCurves(graphRect, curves.Values.ToList(), curveDrawerStyle, this.marks, legendRect);
+                scrollPos_prev = scrollPos_curr;
+                scrollPos_curr = Widgets.HorizontalSlider(sliderRect, scrollPos_curr, min_day, max_day);
+                return scrollPos_curr;
+            }
+        }
+        List<LineGraph> graphList = new List<LineGraph>() {new LineGraph(nextNDays) };
+
+        /* settings for each graph:
+           what data to show
+             projected yield, stock, population
+             work, time
+
+           show deficiency
+           
+           internal:
+             SimpleCurveDrawerStyle
+             are settings changed
+           
+           data selector checkbox
+           add graph button
+        */
 
         // functions
         public override Vector2 RequestedTabSize
@@ -139,14 +264,12 @@ namespace FoodAnalyticsTab
             }
         }
 
-        private void UpdateCalculations()
+        private void MakePrediction()
         {
-            GetInGameData();
-
             // calculate yield for today
             projectedRecords.Clear();
-            projectedRecords.Add(new projectionData(new projectionData.MinMax { min = 0, max = 0 }, new projectionData.MinMax { min = numHay, max = numHay },
-                                 new projectionData.MinMax { min = numMeat, max = numMeat }));
+            projectedRecords.Add(new prediction(new prediction.MinMax { min = 0, max = 0 }, new prediction.MinMax { min = numHay, max = numHay },
+                                 new prediction.MinMax { min = numMeat, max = numMeat }));
             if (GenDate.HourOfDay >= 4 && GenDate.HourOfDay <= 19)
             {
                 if (allHaygrassGrowth.LastOrDefault().Growth >= 1.0f)
@@ -162,20 +285,13 @@ namespace FoodAnalyticsTab
             projectedRecords[0].hay_stock.min -= GenDate.CurrentDayPercent * dailyHayConsumption;
             projectedRecords[0].meat_stock.max -= GenDate.CurrentDayPercent * dailyKibbleConsumption * 2f / 5f; // convert every 50 kibbles to 20 meat
             projectedRecords[0].meat_stock.min -= GenDate.CurrentDayPercent * dailyKibbleConsumption * 2f / 5f;
-            if (projectedRecords[0].hay_stock.max <= 0f)
-            {
-                projectedRecords[0].hay_stock.max = 0;
-            }
-            if (projectedRecords[0].hay_stock.min <= 0f)
-            {
-                projectedRecords[0].hay_stock.min = 0;
-            }
+
             // calculate yields and stocks after today
-            for (int day = 1; day < nextNDays[0]; day++)
+            for (int day = 1; day < nextNDays; day++)
             {
-                projectedRecords.Add(new projectionData(new projectionData.MinMax { min = 0, max = 0 }, 
-                    new projectionData.MinMax { max = projectedRecords[day - 1].hay_stock.max, min = projectedRecords[day - 1].hay_stock.min },
-                    new projectionData.MinMax { max = projectedRecords[day - 1].meat_stock.max, min = projectedRecords[day - 1].meat_stock.min }));
+                projectedRecords.Add(new prediction(new prediction.MinMax { min = 0, max = 0 },
+                    new prediction.MinMax { max = projectedRecords[day - 1].hay_stock.max, min = projectedRecords[day - 1].hay_stock.min },
+                    new prediction.MinMax { max = projectedRecords[day - 1].meat_stock.max, min = projectedRecords[day - 1].meat_stock.min }));
                 foreach (haygrassGrowth k in allHaygrassGrowth)
                 {
                     k.Growth += k.GrowthPerTick * GenDate.TicksPerDay * 0.55f; // 0.55 is 55% of time plant spent growing
@@ -195,16 +311,15 @@ namespace FoodAnalyticsTab
                 projectedRecords[day].meat_stock.max -= dailyKibbleConsumption * 2f / 5f;
                 projectedRecords[day].meat_stock.min -= dailyKibbleConsumption * 2f / 5f;
 
-                if (projectedRecords[day].hay_stock.max <= 0f)
-                {
-                    projectedRecords[day].hay_stock.max = 0;
-                }
-                if (projectedRecords[day].hay_stock.min <= 0f)
-                {
-                    projectedRecords[day].hay_stock.min = 0;
-                }
+
             }
+        }
+
+        private void UpdateCalculations()
+        {
+            GetInGameData();
             UpdateDates();
+            MakePrediction();
         }
         // calculating number of days until certain dates
         private void UpdateDates()
@@ -243,16 +358,9 @@ namespace FoodAnalyticsTab
         public override void DoWindowContents(Rect inRect)
         {
             base.DoWindowContents(inRect);
-            if (dayNumSlider_curr[0] != dayNumSlider_prev[0] || GenTicks.TicksAbs - lastUpdateTick >= (GenDate.TicksPerHour/5)) // Find.TickManager.Paused
+            if (graphList[0].changed || GenTicks.TicksAbs - lastUpdateTick >= (GenDate.TicksPerHour/5)) // Find.TickManager.Paused
             {
                 lastUpdateTick = GenTicks.TicksAbs;
-                nextNDays[0] = (int)dayNumSlider_curr[0];
-                UpdateCalculations();
-            }
-            if (dayNumSlider_curr[1] != dayNumSlider_prev[1] || GenTicks.TicksAbs - lastUpdateTick >= (GenDate.TicksPerHour / 5)) // Find.TickManager.Paused
-            {
-                lastUpdateTick = GenTicks.TicksAbs;
-                nextNDays[1] = (int)dayNumSlider_curr[1];
                 UpdateCalculations();
             }
 
@@ -314,7 +422,7 @@ namespace FoodAnalyticsTab
                             "\nEstimate of projected harvest production:\n";
             analysis += "Day\t Max Yield Min Yield Max Stock Min Stock\n";
             int i = 0;
-            foreach (projectionData k in projectedRecords)
+            foreach (prediction k in projectedRecords)
             {
                 analysis += String.Format("{0,-2}\t {1,-6}\t {2,-6}\t {3,-6}\t {4,-6}\n",
                     i, (int)k.hay_yield.max, (int)k.hay_yield.min, (int)k.hay_stock.max, (int)k.hay_stock.min);
@@ -340,90 +448,20 @@ namespace FoodAnalyticsTab
         private void DisplayGraphPage(Rect rect)
         {
             //marks add dots on top of a graph, the text label is the text in the popup box
-            this.marks.Clear();
-            this.marks.Add(new CurveMark(this.daysUntilNextHarvestSeason, "Days until the Next Harvest Season", Color.green));
-            this.marks.Add(new CurveMark(this.daysUntilNextHarvestSeason, "Days until the Next Harvest Season", Color.green));// fix i++ bug
-            this.marks.Add(new CurveMark(this.daysUntilGrowingPeriodOver, "Days until Growing Period is Over", Color.red));
-            this.marks.Add(new CurveMark(this.daysUntilGrowingPeriodOver, "Days until Growing Period is Over", Color.red));
-            this.marks.Add(new CurveMark(this.daysUntilWinter, "Days until the Winter", Color.white));
-            this.marks.Add(new CurveMark(this.daysUntilWinter, "Days until the Winter", Color.white));
-            this.marks.Add(new CurveMark(this.daysUntilEndofWinter, "Days until the End of Winter", Color.yellow));
-            this.marks.Add(new CurveMark(this.daysUntilEndofWinter, "Days until the End of Winter", Color.yellow));
-            //debug_val[0] = marks.Count;
-            // plotting graphs
-            List<SimpleCurveDrawInfo> curves = new List<SimpleCurveDrawInfo>();
+            graphList[0].SetMarks(this.daysUntilNextHarvestSeason, "Days until the Next Harvest Season", Color.green);
+            graphList[0].SetMarks(this.daysUntilGrowingPeriodOver, "Days until Growing Period is Over", Color.red);
+            graphList[0].SetMarks(this.daysUntilWinter, "Days until the Winter", Color.white);
+            graphList[0].SetMarks(this.daysUntilEndofWinter, "Days until the End of Winter", Color.yellow);
 
-            List<SimpleCurveDrawInfo> simpleCurveDrawInfo = new List<SimpleCurveDrawInfo>();
-            simpleCurveDrawInfo.Add(new SimpleCurveDrawInfo());
-            simpleCurveDrawInfo.Last().color = Color.green;
-            simpleCurveDrawInfo.Last().label = "Hay Yield(Max)";
-            simpleCurveDrawInfo.Last().curve = new SimpleCurve();
-            simpleCurveDrawInfo.Add(new SimpleCurveDrawInfo());
-            simpleCurveDrawInfo.Last().color = Color.red;
-            simpleCurveDrawInfo.Last().label = "Hay Yield(Min)";
-            simpleCurveDrawInfo.Last().curve = new SimpleCurve();
-            simpleCurveDrawInfo.Add(new SimpleCurveDrawInfo());
-            simpleCurveDrawInfo.Last().color = Color.white;
-            simpleCurveDrawInfo.Last().label = "Hay Stock(Max)";
-            simpleCurveDrawInfo.Last().curve = new SimpleCurve();
-            simpleCurveDrawInfo.Add(new SimpleCurveDrawInfo());
-            simpleCurveDrawInfo.Last().color = Color.magenta;
-            simpleCurveDrawInfo.Last().label = "Hay Stock(Min)";
-            simpleCurveDrawInfo.Last().curve = new SimpleCurve();
-            simpleCurveDrawInfo.Add(new SimpleCurveDrawInfo());
-            simpleCurveDrawInfo.Last().color = Color.blue;
-            simpleCurveDrawInfo.Last().label = "Meat Stock";
-            simpleCurveDrawInfo.Last().curve = new SimpleCurve();
+            // plotting graphs   
+            graphList[0].SetCurve("Hay Yield(Max)", Color.green, projectedRecords.Select(y => y.hay_yield.max).ToList());
+            graphList[0].SetCurve("Hay Yield(Min)", Color.red, projectedRecords.Select(y => y.hay_yield.min).ToList());
+            graphList[0].SetCurve("Hay Stock(Max)", Color.white, projectedRecords.Select(y => y.hay_stock.max).ToList());
+            graphList[0].SetCurve("Hay Stock(Min)", Color.magenta, projectedRecords.Select(y => y.hay_stock.min).ToList());
+            graphList[0].SetCurve("Meat Stock", Color.blue, projectedRecords.Select(y => y.meat_stock.max).ToList());
 
-            for (int day = 0; day < nextNDays[0]; day++)
-            {
-                simpleCurveDrawInfo[0].curve.Add(new CurvePoint(day, projectedRecords[day].hay_yield.max));
-                simpleCurveDrawInfo[1].curve.Add(new CurvePoint(day, projectedRecords[day].hay_yield.min));
-                simpleCurveDrawInfo[2].curve.Add(new CurvePoint(day, projectedRecords[day].hay_stock.max));
-                simpleCurveDrawInfo[3].curve.Add(new CurvePoint(day, projectedRecords[day].hay_stock.min));
-                simpleCurveDrawInfo[4].curve.Add(new CurvePoint(day, projectedRecords[day].meat_stock.max));
-            }
-            foreach (var s in simpleCurveDrawInfo) { 
-                curves.Add(s);
-            }
-            
-            SimpleCurveDrawerStyle curveDrawerStyle = new SimpleCurveDrawerStyle();
-            curveDrawerStyle.UseFixedSection = true;
-            curveDrawerStyle.FixedSection = new Vector2(0, nextNDays[0]);
-            curveDrawerStyle.LabelY = "Hay #";
-            curveDrawerStyle.LabelX = "Day";
-            curveDrawerStyle.UseFixedScale = false;
-            //curveDrawerStyle.FixedScale = new Vector2(rect.width * 0.8f,300);
-            curveDrawerStyle.DrawBackground = true; // draw gray background behind graph
-            curveDrawerStyle.DrawBackgroundLines = true; // 
-            curveDrawerStyle.DrawMeasures = true;
-            curveDrawerStyle.MeasureLabelsXCount = nextNDays[0]; // number of marks on x axis 
-            curveDrawerStyle.MeasureLabelsYCount = 5;
-            curveDrawerStyle.DrawPoints = false; // draw white points for each data
-            curveDrawerStyle.DrawLegend = true; //
-            curveDrawerStyle.DrawCurveMousePoint = true; // hover over graph shows details
-                                                         //curveDrawerStyle.OnlyPositiveValues = false;
-                                                         //curveDrawerStyle.PointsRemoveOptimization = false;
-            curveDrawerStyle.UseAntiAliasedLines = true; // smooth lines
-            
-            Rect graphRect = new Rect(0f, 10f, rect.width * .95f, 450f);
-            Rect legendRect = new Rect(0f, graphRect.yMax, graphRect.width, 40f);
-            Rect sliderRect = new Rect(0, legendRect.yMax, graphRect.width, 50f);
-
-            Rect graphRect2 = new Rect(0f, sliderRect.yMax, graphRect.width, 450f);
-            Rect legendRect2 = new Rect(0f, graphRect2.yMax, graphRect.width, 40f);
-            Rect sliderRect2 = new Rect(0, legendRect2.yMax, graphRect.width, 50f);
-
-            Rect rect2 = new Rect(0, 0, graphRect.width, 2*(graphRect.height + legendRect.height + sliderRect.height));
-
-            Widgets.BeginScrollView(rect, ref this.scrollPos[(int)FoodAnalyticsTab.Graph], rect2);
-            SimpleCurveDrawer.DrawCurves(graphRect, curves, curveDrawerStyle, this.marks, legendRect);
-            dayNumSlider_prev[0] = dayNumSlider_curr[0];
-            dayNumSlider_curr[0] =  Widgets.HorizontalSlider(sliderRect, dayNumSlider_curr[0], 1, 60);
-
-            SimpleCurveDrawer.DrawCurves(graphRect2, curves, curveDrawerStyle, this.marks, legendRect2);
-            dayNumSlider_prev[1] = dayNumSlider_curr[1];
-            dayNumSlider_curr[1] = Widgets.HorizontalSlider(sliderRect2, dayNumSlider_curr[1], 1, 60);
+            Widgets.BeginScrollView(rect, ref this.scrollPos[(int)FoodAnalyticsTab.Graph], new Rect(0, 0, rect.width, rect.height*2));
+            nextNDays = (int) graphList[0].Draw(rect);
 
             Widgets.EndScrollView();
         }
