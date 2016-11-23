@@ -24,14 +24,13 @@ namespace FoodAnalyticsTab
         //graphics 
         private enum FoodAnalyticsTab : byte
         {
-            Graph,
-            Analytics,
-            Help
+            Graph= 0,
+            Analytics = 1,
+            Help = 2
         }
-        private Vector2 graphSection = default(Vector2);
         private MainTabWindow_Estimator.FoodAnalyticsTab curTab = FoodAnalyticsTab.Graph, prevTab = FoodAnalyticsTab.Analytics;
         private List<CurveMark> marks = new List<CurveMark>();
-        Vector2 scrollPos = Vector2.zero; // for scrolling view
+        Vector2 []scrollPos = new Vector2[3] { Vector2.zero, Vector2.zero, Vector2.zero }; // for scrolling view
 
         protected float lastUpdate = -1f;
         private int lastUpdateTick = 0;
@@ -56,9 +55,10 @@ namespace FoodAnalyticsTab
             public MinMax hay_stock { get; set; }
             public MinMax meat_stock { get; set; }
         };
-        private static int nextNDays = 25; // default display 25 days
-        private float dayNumSlider_curr = nextNDays, dayNumSlider_prev = nextNDays;
-        
+        private static int [] nextNDays = new int[2] { 25, 25 }; // default display 25 days
+        private float[] dayNumSlider_curr = new float[2] { 25, 25 },
+                         dayNumSlider_prev = new float[2] { 25, 25 };
+
         List<projectionData> projectedRecords = new List<projectionData>(); 
         private class haygrassGrowth
         {
@@ -171,7 +171,7 @@ namespace FoodAnalyticsTab
                 projectedRecords[0].hay_stock.min = 0;
             }
             // calculate yields and stocks after today
-            for (int day = 1; day < nextNDays; day++)
+            for (int day = 1; day < nextNDays[0]; day++)
             {
                 projectedRecords.Add(new projectionData(new projectionData.MinMax { min = 0, max = 0 }, 
                     new projectionData.MinMax { max = projectedRecords[day - 1].hay_stock.max, min = projectedRecords[day - 1].hay_stock.min },
@@ -243,16 +243,20 @@ namespace FoodAnalyticsTab
         public override void DoWindowContents(Rect inRect)
         {
             base.DoWindowContents(inRect);
-            bool updated = false;
-            if (dayNumSlider_curr != dayNumSlider_prev || GenTicks.TicksAbs - lastUpdateTick >= (GenDate.TicksPerHour/5)) // Find.TickManager.Paused
+            if (dayNumSlider_curr[0] != dayNumSlider_prev[0] || GenTicks.TicksAbs - lastUpdateTick >= (GenDate.TicksPerHour/5)) // Find.TickManager.Paused
             {
                 lastUpdateTick = GenTicks.TicksAbs;
-                nextNDays = (int)dayNumSlider_curr;
+                nextNDays[0] = (int)dayNumSlider_curr[0];
                 UpdateCalculations();
-                updated = true;
+            }
+            if (dayNumSlider_curr[1] != dayNumSlider_prev[1] || GenTicks.TicksAbs - lastUpdateTick >= (GenDate.TicksPerHour / 5)) // Find.TickManager.Paused
+            {
+                lastUpdateTick = GenTicks.TicksAbs;
+                nextNDays[1] = (int)dayNumSlider_curr[1];
+                UpdateCalculations();
             }
 
-            
+
             Rect rect2 = inRect;
             rect2.yMin += 45f; // move top border downs
             List<TabRecord> list = new List<TabRecord>();
@@ -328,18 +332,13 @@ namespace FoodAnalyticsTab
             Text.Anchor = TextAnchor.UpperLeft;
             Text.Font = GameFont.Small;
             Rect rect2 = new Rect(0, 0, rect.width, analysis.Split('\n').Length * 20);
-            Widgets.BeginScrollView(rect, ref this.scrollPos, rect2);
+            Widgets.BeginScrollView(rect, ref this.scrollPos[(int)FoodAnalyticsTab.Analytics], rect2);
             Widgets.Label(rect2, analysis);
             Widgets.EndScrollView();
         }
 
         private void DisplayGraphPage(Rect rect)
         {
-            rect.yMin += 17f;
-            GUI.BeginGroup(rect);
-            Rect graphRect = new Rect(0f, 0f, rect.width, 450f);
-            Rect legendRect = new Rect(0f, graphRect.yMax, rect.width, 40f);
-
             //marks add dots on top of a graph, the text label is the text in the popup box
             this.marks.Clear();
             this.marks.Add(new CurveMark(this.daysUntilNextHarvestSeason, "Days until the Next Harvest Season", Color.green));
@@ -376,7 +375,7 @@ namespace FoodAnalyticsTab
             simpleCurveDrawInfo.Last().label = "Meat Stock";
             simpleCurveDrawInfo.Last().curve = new SimpleCurve();
 
-            for (int day = 0; day < nextNDays; day++)
+            for (int day = 0; day < nextNDays[0]; day++)
             {
                 simpleCurveDrawInfo[0].curve.Add(new CurvePoint(day, projectedRecords[day].hay_yield.max));
                 simpleCurveDrawInfo[1].curve.Add(new CurvePoint(day, projectedRecords[day].hay_yield.min));
@@ -390,15 +389,15 @@ namespace FoodAnalyticsTab
             
             SimpleCurveDrawerStyle curveDrawerStyle = new SimpleCurveDrawerStyle();
             curveDrawerStyle.UseFixedSection = true;
-            curveDrawerStyle.FixedSection = new Vector2(0, nextNDays);
+            curveDrawerStyle.FixedSection = new Vector2(0, nextNDays[0]);
             curveDrawerStyle.LabelY = "Hay #";
             curveDrawerStyle.LabelX = "Day";
             curveDrawerStyle.UseFixedScale = false;
-            curveDrawerStyle.FixedScale = new Vector2(500,900);
+            //curveDrawerStyle.FixedScale = new Vector2(rect.width * 0.8f,300);
             curveDrawerStyle.DrawBackground = true; // draw gray background behind graph
             curveDrawerStyle.DrawBackgroundLines = true; // 
             curveDrawerStyle.DrawMeasures = true;
-            curveDrawerStyle.MeasureLabelsXCount = nextNDays; // number of marks on x axis 
+            curveDrawerStyle.MeasureLabelsXCount = nextNDays[0]; // number of marks on x axis 
             curveDrawerStyle.MeasureLabelsYCount = 5;
             curveDrawerStyle.DrawPoints = false; // draw white points for each data
             curveDrawerStyle.DrawLegend = true; //
@@ -407,12 +406,26 @@ namespace FoodAnalyticsTab
                                                          //curveDrawerStyle.PointsRemoveOptimization = false;
             curveDrawerStyle.UseAntiAliasedLines = true; // smooth lines
             
+            Rect graphRect = new Rect(0f, 10f, rect.width * .95f, 450f);
+            Rect legendRect = new Rect(0f, graphRect.yMax, graphRect.width, 40f);
+            Rect sliderRect = new Rect(0, legendRect.yMax, graphRect.width, 50f);
 
-            Text.Anchor = TextAnchor.UpperLeft;
+            Rect graphRect2 = new Rect(0f, sliderRect.yMax, graphRect.width, 450f);
+            Rect legendRect2 = new Rect(0f, graphRect2.yMax, graphRect.width, 40f);
+            Rect sliderRect2 = new Rect(0, legendRect2.yMax, graphRect.width, 50f);
+
+            Rect rect2 = new Rect(0, 0, graphRect.width, 2*(graphRect.height + legendRect.height + sliderRect.height));
+
+            Widgets.BeginScrollView(rect, ref this.scrollPos[(int)FoodAnalyticsTab.Graph], rect2);
             SimpleCurveDrawer.DrawCurves(graphRect, curves, curveDrawerStyle, this.marks, legendRect);
-            dayNumSlider_prev = dayNumSlider_curr;
-            dayNumSlider_curr =  Widgets.HorizontalSlider(new Rect(0, legendRect.yMax, rect.width, 50), dayNumSlider_curr, 1, 60);
-            GUI.EndGroup();
+            dayNumSlider_prev[0] = dayNumSlider_curr[0];
+            dayNumSlider_curr[0] =  Widgets.HorizontalSlider(sliderRect, dayNumSlider_curr[0], 1, 60);
+
+            SimpleCurveDrawer.DrawCurves(graphRect2, curves, curveDrawerStyle, this.marks, legendRect2);
+            dayNumSlider_prev[1] = dayNumSlider_curr[1];
+            dayNumSlider_curr[1] = Widgets.HorizontalSlider(sliderRect2, dayNumSlider_curr[1], 1, 60);
+
+            Widgets.EndScrollView();
         }
 
         private void DisplayHelpPage(Rect rect)
