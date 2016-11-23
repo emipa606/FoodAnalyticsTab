@@ -25,7 +25,8 @@ namespace FoodAnalyticsTab
         private enum FoodAnalyticsTab : byte
         {
             Graph,
-            Analytics
+            Analytics,
+            Help
         }
         private Vector2 graphSection = default(Vector2);
         private MainTabWindow_Estimator.FoodAnalyticsTab curTab = FoodAnalyticsTab.Graph, prevTab = FoodAnalyticsTab.Analytics;
@@ -37,7 +38,7 @@ namespace FoodAnalyticsTab
 
         // analytics
         private float totalNeededHay, totalNeededKibble, totalNeededHayIncludingKibble;
-        private int numAnimals, numHaygrass, numHay;
+        private int numAnimals, numRoughAnimals, numKibbleAnimals, numHaygrass, numHay;
         private class hayProjection
         {
             public hayProjection(float a, float b, float c, float d)
@@ -106,22 +107,20 @@ namespace FoodAnalyticsTab
             var allHaygrass = Find.ListerThings.AllThings.Where(x => x.Label == "haygrass");
             numAnimals = pawns.Where(x => x.RaceProps.Animal).Count();
 
-            totalNeededHay = pawns
-                           .Where(x => x.RaceProps.Animal &&
-                                (x.RaceProps.foodType == FoodTypeFlags.OmnivoreRoughAnimal ||
-                                x.RaceProps.foodType == FoodTypeFlags.VegetableOrFruit ||
-                                x.RaceProps.foodType == FoodTypeFlags.VegetarianAnimal ||
-                                x.RaceProps.foodType == FoodTypeFlags.VegetarianRoughAnimal))
+            var roughAnimals = pawns
+                           .Where(x => x.RaceProps.Animal && x.RaceProps.Eats(FoodTypeFlags.Plant));
+            numRoughAnimals = roughAnimals.Count();
+            totalNeededHay = roughAnimals
                            .Sum(x => x.needs.food.FoodFallPerTick) * GenDate.TicksPerDay / hayNut;
             debug_val[1] = hayNut;
             //TODO: find animals' hunger rate when they are full instead whatever state they are in now.
 
-            totalNeededKibble = pawns.Where(x => x.RaceProps.Animal &&
-                           (x.RaceProps.foodType == FoodTypeFlags.OmnivoreAnimal ||
-                           x.RaceProps.foodType == FoodTypeFlags.CarnivoreAnimal))
+            var kibbleAnimals = pawns.Where(x => x.RaceProps.Animal && !x.RaceProps.Eats(FoodTypeFlags.Plant) && x.RaceProps.Eats(FoodTypeFlags.Kibble));
+            numKibbleAnimals = kibbleAnimals.Count();
+            totalNeededKibble = kibbleAnimals
                            .Sum(x => x.needs.food.FoodFallPerTick) * GenDate.TicksPerDay / hayNut;
             totalNeededHayIncludingKibble = totalNeededKibble * 2f / 5f + totalNeededHay;
-
+            
             numHaygrass = allHaygrass.Count();
             numHay = Find.ListerThings.AllThings.Where(x => x.def.label == "hay").Sum(x => x.stackCount);
 
@@ -244,6 +243,11 @@ namespace FoodAnalyticsTab
                 this.curTab = FoodAnalyticsTab.Analytics;
             }, this.curTab == FoodAnalyticsTab.Analytics));
 
+            list.Add(new TabRecord("Help", delegate
+            {
+                this.curTab = FoodAnalyticsTab.Help;
+            }, this.curTab == FoodAnalyticsTab.Help));
+
             TabDrawer.DrawTabs(rect2, list);
 
             if (this.curTab == FoodAnalyticsTab.Graph)
@@ -254,13 +258,17 @@ namespace FoodAnalyticsTab
             {
                 this.DisplayAnalyticsPage(rect2);
                 //this.prevTab = FoodAnalyticsTab.Analytics;
-            }            
+            } else if (this.curTab == FoodAnalyticsTab.Help)
+            {
+                this.DisplayHelpPage(rect2);
+                //this.prevTab = FoodAnalyticsTab.Graph;
+            }
         }
 
         private void DisplayAnalyticsPage(Rect rect)
         {
             // constructing string
-            string analysis = "Number of animals you have = " + (int)numAnimals +
+            string analysis = "Number of animals you have = " + (int)numAnimals + ", hay animals = " + numRoughAnimals + ", kibble animals = " + numKibbleAnimals +
                             "\nNumber of hay in stockpiles and on the floors = " + (int)numHay +
                             "\nEstimated number of hay needed daily for hay-eaters only= " + (int)totalNeededHay +
                             "\nEstimated number of kibble needed for all kibble-eaters = " + (int) totalNeededKibble +
@@ -390,6 +398,9 @@ namespace FoodAnalyticsTab
             GUI.EndGroup();
         }
 
-        
+        private void DisplayHelpPage(Rect rect)
+        {
+
+        }
     }
 }
