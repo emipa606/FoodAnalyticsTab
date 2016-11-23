@@ -79,13 +79,13 @@ namespace FoodAnalyticsTab
                 }
             }
 
-            public prediction(MinMax a, MinMax b, MinMax c =null, MinMax d = null, MinMax e = null)
+            public prediction(MinMax a, MinMax b, MinMax c, MinMax d, MinMax e )
             {
                 hay_yield = a;
-                hay_consumption = (e == null) ? new MinMax() : e;
                 hay_stock = b;
-                meat_stock = (c == null) ? new MinMax() : c;
-                animal_population = (d == null) ? new MinMax() : d;
+                hay_consumption = c;
+                meat_stock = d;
+                animal_population = e;
                 showDeficiency = false;
             }
             public MinMax hay_yield { get; set; }
@@ -96,7 +96,7 @@ namespace FoodAnalyticsTab
 
         };
 
-        private static int nextNDays = 25; // default display 25 days
+        private static int nextNDays = 60; // default display 25 days
 
         List<prediction> projectedRecords = new List<prediction>(); 
         private class haygrassGrowth
@@ -133,9 +133,9 @@ namespace FoodAnalyticsTab
             private Dictionary<String, SimpleCurveDrawInfo> curves = new Dictionary<String, SimpleCurveDrawInfo>();
             private SimpleCurveDrawerStyle curveDrawerStyle = new SimpleCurveDrawerStyle();
 
-            public float scrollPos_curr { get; set; }
-            public float scrollPos_prev { get; set; }
-            public bool changed { get { return scrollPos_curr != scrollPos_prev; } }
+            private float scrollPos_curr { get; set; }
+            private float scrollPos_prev { get; set; }
+            public bool changed { get { return (int) scrollPos_curr != (int) scrollPos_prev; } }
             static int min_day = 1, max_day = 60;
 
             public LineGraph(float default_day)
@@ -268,8 +268,13 @@ namespace FoodAnalyticsTab
         {
             // calculate yield for today
             projectedRecords.Clear();
-            projectedRecords.Add(new prediction(new prediction.MinMax { min = 0, max = 0 }, new prediction.MinMax { min = numHay, max = numHay },
-                                 new prediction.MinMax { min = numMeat, max = numMeat }));
+            projectedRecords.Add(
+                new prediction(
+                    new prediction.MinMax { min = 0, max = 0 }, 
+                    new prediction.MinMax { min = numHay, max = numHay },
+                    new prediction.MinMax { min = dailyHayConsumption , max = dailyHayConsumption },
+                    new prediction.MinMax { min = numMeat, max = numMeat },
+                    new prediction.MinMax { min = numAnimals, max = numAnimals }));
             if (GenDate.HourOfDay >= 4 && GenDate.HourOfDay <= 19)
             {
                 if (allHaygrassGrowth.LastOrDefault().Growth >= 1.0f)
@@ -289,23 +294,29 @@ namespace FoodAnalyticsTab
             // calculate yields and stocks after today
             for (int day = 1; day < nextNDays; day++)
             {
-                projectedRecords.Add(new prediction(new prediction.MinMax { min = 0, max = 0 },
-                    new prediction.MinMax { max = projectedRecords[day - 1].hay_stock.max, min = projectedRecords[day - 1].hay_stock.min },
-                    new prediction.MinMax { max = projectedRecords[day - 1].meat_stock.max, min = projectedRecords[day - 1].meat_stock.min }));
-                foreach (haygrassGrowth k in allHaygrassGrowth)
+                projectedRecords.Add(
+                    new prediction(
+                        new prediction.MinMax { min = 0, max = 0 },
+                        new prediction.MinMax { max = projectedRecords[day - 1].hay_stock.max, min = projectedRecords[day - 1].hay_stock.min },
+                        new prediction.MinMax { max = projectedRecords[day - 1].hay_consumption.max, min = projectedRecords[day - 1].hay_consumption.min },
+                        new prediction.MinMax { max = projectedRecords[day - 1].meat_stock.max, min = projectedRecords[day - 1].meat_stock.min },
+                        new prediction.MinMax { max = projectedRecords[day - 1].animal_population.max, min = projectedRecords[day - 1].animal_population.min }));
+                if (day <= daysUntilGrowingPeriodOver)
                 {
-                    k.Growth += k.GrowthPerTick * GenDate.TicksPerDay * 0.55f; // 0.55 is 55% of time plant spent growing
-                    //debug_val[6] = k.GrowthPerTick;
-                    if (k.Growth >= 1.0f)
+                    foreach (haygrassGrowth k in allHaygrassGrowth)
                     {
-                        projectedRecords[day].hay_yield.max += haygrass_yieldMax;
-                        projectedRecords[day].hay_yield.min += haygrass_yieldMin;
-                        k.Growth = 0.05f; // if it's fully grown, replant and their growths start at 5%.
+                        k.Growth += k.GrowthPerTick * GenDate.TicksPerDay * 0.55f; // 0.55 is 55% of time plant spent growing
+                        //debug_val[6] = k.GrowthPerTick;
+                        if (k.Growth >= 1.0f)
+                        {
+                            projectedRecords[day].hay_yield.max += haygrass_yieldMax;
+                            projectedRecords[day].hay_yield.min += haygrass_yieldMin;
+                            k.Growth = 0.05f; // if it's fully grown, replant and their growths start at 5%.
+                        }
                     }
                 }
                 projectedRecords[day].hay_stock.max += projectedRecords[day].hay_yield.max;
                 projectedRecords[day].hay_stock.min += projectedRecords[day].hay_yield.min;
-
                 projectedRecords[day].hay_stock.max -= dailyHayConsumption;
                 projectedRecords[day].hay_stock.min -= dailyHayConsumption;
                 projectedRecords[day].meat_stock.max -= dailyKibbleConsumption * 2f / 5f;
@@ -358,7 +369,7 @@ namespace FoodAnalyticsTab
         public override void DoWindowContents(Rect inRect)
         {
             base.DoWindowContents(inRect);
-            if (graphList[0].changed || GenTicks.TicksAbs - lastUpdateTick >= (GenDate.TicksPerHour/5)) // Find.TickManager.Paused
+            if (GenTicks.TicksAbs - lastUpdateTick >= (GenDate.TicksPerHour/5)) // Find.TickManager.Paused
             {
                 lastUpdateTick = GenTicks.TicksAbs;
                 UpdateCalculations();
@@ -461,7 +472,8 @@ namespace FoodAnalyticsTab
             graphList[0].SetCurve("Meat Stock", Color.blue, projectedRecords.Select(y => y.meat_stock.max).ToList());
 
             Widgets.BeginScrollView(rect, ref this.scrollPos[(int)FoodAnalyticsTab.Graph], new Rect(0, 0, rect.width, rect.height*2));
-            nextNDays = (int) graphList[0].Draw(rect);
+            //nextNDays = (int) graphList[0].Draw(rect);
+            graphList[0].Draw(rect);
 
             Widgets.EndScrollView();
         }
