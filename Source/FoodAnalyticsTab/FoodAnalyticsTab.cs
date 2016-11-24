@@ -37,7 +37,7 @@ namespace FoodAnalyticsTab
         // analytics
         private float totalNeededHay, dailyKibbleConsumption, dailyHayConsumption;
         private int numAnimals, numRoughAnimals, numKibbleAnimals, numHaygrass, numHay, numMeat;
-        private class prediction
+        private class Prediction
         {
             public class MinMax
             {
@@ -79,7 +79,7 @@ namespace FoodAnalyticsTab
                 }
             }
 
-            public prediction(MinMax a, MinMax b, MinMax c, MinMax d, MinMax e )
+            public Prediction(MinMax a, MinMax b, MinMax c, MinMax d, MinMax e )
             {
                 hay_yield = a;
                 hay_stock = b;
@@ -93,23 +93,23 @@ namespace FoodAnalyticsTab
             public MinMax meat_stock { get; set; }
             public MinMax animal_population { get; set; }
             public MinMax hay_consumption { get; set; }
-
         };
 
         private static int nextNDays = 60; // default display 25 days
 
-        List<prediction> projectedRecords = new List<prediction>(); 
-        private class haygrassGrowth
+        List<Prediction> projectedRecords = new List<Prediction>(); 
+        private class PlantGrowth
         {
-            public haygrassGrowth(float a, float b)
+            public PlantGrowth(float a, float b)
             {
                 Growth = a;
                 GrowthPerTick = b;
             }
             public float Growth { get; set; }
             public float GrowthPerTick { get; set; }
+            public bool IsOutdoor { get; set; }
         };
-        List<haygrassGrowth> allHaygrassGrowth = new List<haygrassGrowth>();
+        List<PlantGrowth> allHaygrassGrowth = new List<PlantGrowth>();
 
         private float[] debug_val = new float[10];
         // important dates
@@ -258,9 +258,10 @@ namespace FoodAnalyticsTab
             allHaygrassGrowth.Clear();
             foreach (var h in allHaygrass) // add today's growth data
             {
-                allHaygrassGrowth.Add(new haygrassGrowth(
+                allHaygrassGrowth.Add(new PlantGrowth(
                     ((Plant)h).Growth + GenDate.TicksPerHour * (19 - GenDate.HourOfDay) * ((Plant)h).GrowthRate / (GenDate.TicksPerDay * h.def.plant.growDays),
                     ((Plant)h).GrowthRate / (GenDate.TicksPerDay * h.def.plant.growDays)));
+                allHaygrassGrowth.Last().IsOutdoor = h.Position.GetRoomOrAdjacent().UsesOutdoorTemperature;
             }
         }
 
@@ -269,17 +270,17 @@ namespace FoodAnalyticsTab
             // calculate yield for today
             projectedRecords.Clear();
             projectedRecords.Add(
-                new prediction(
-                    new prediction.MinMax { min = 0, max = 0 }, 
-                    new prediction.MinMax { min = numHay, max = numHay },
-                    new prediction.MinMax { min = dailyHayConsumption , max = dailyHayConsumption },
-                    new prediction.MinMax { min = numMeat, max = numMeat },
-                    new prediction.MinMax { min = numAnimals, max = numAnimals }));
+                new Prediction(
+                    new Prediction.MinMax { min = 0, max = 0 }, 
+                    new Prediction.MinMax { min = numHay, max = numHay },
+                    new Prediction.MinMax { min = dailyHayConsumption , max = dailyHayConsumption },
+                    new Prediction.MinMax { min = numMeat, max = numMeat },
+                    new Prediction.MinMax { min = numAnimals, max = numAnimals }));
             if (GenDate.HourOfDay >= 4 && GenDate.HourOfDay <= 19)
             {
                 if (allHaygrassGrowth.LastOrDefault().Growth >= 1.0f)
                 {
-                    allHaygrassGrowth.LastOrDefault().Growth = 0.5f;
+                    allHaygrassGrowth.LastOrDefault().Growth = Plant.BaseGrowthPercent;
                     projectedRecords[0].hay_yield.max += haygrass_yieldMax;
                     projectedRecords[0].hay_yield.min += haygrass_yieldMin;
                 }
@@ -295,26 +296,29 @@ namespace FoodAnalyticsTab
             for (int day = 1; day < nextNDays; day++)
             {
                 projectedRecords.Add(
-                    new prediction(
-                        new prediction.MinMax { min = 0, max = 0 },
-                        new prediction.MinMax { max = projectedRecords[day - 1].hay_stock.max, min = projectedRecords[day - 1].hay_stock.min },
-                        new prediction.MinMax { max = projectedRecords[day - 1].hay_consumption.max, min = projectedRecords[day - 1].hay_consumption.min },
-                        new prediction.MinMax { max = projectedRecords[day - 1].meat_stock.max, min = projectedRecords[day - 1].meat_stock.min },
-                        new prediction.MinMax { max = projectedRecords[day - 1].animal_population.max, min = projectedRecords[day - 1].animal_population.min }));
-                if (day <= daysUntilGrowingPeriodOver)
+                    new Prediction(
+                        new Prediction.MinMax { min = 0, max = 0 },
+                        new Prediction.MinMax { max = projectedRecords[day - 1].hay_stock.max, min = projectedRecords[day - 1].hay_stock.min },
+                        new Prediction.MinMax { max = projectedRecords[day - 1].hay_consumption.max, min = projectedRecords[day - 1].hay_consumption.min },
+                        new Prediction.MinMax { max = projectedRecords[day - 1].meat_stock.max, min = projectedRecords[day - 1].meat_stock.min },
+                        new Prediction.MinMax { max = projectedRecords[day - 1].animal_population.max, min = projectedRecords[day - 1].animal_population.min }));
+
+                foreach (PlantGrowth k in allHaygrassGrowth)
                 {
-                    foreach (haygrassGrowth k in allHaygrassGrowth)
+                    if (k.IsOutdoor && !(day <= daysUntilGrowingPeriodOver))
                     {
-                        k.Growth += k.GrowthPerTick * GenDate.TicksPerDay * 0.55f; // 0.55 is 55% of time plant spent growing
-                        //debug_val[6] = k.GrowthPerTick;
-                        if (k.Growth >= 1.0f)
-                        {
-                            projectedRecords[day].hay_yield.max += haygrass_yieldMax;
-                            projectedRecords[day].hay_yield.min += haygrass_yieldMin;
-                            k.Growth = 0.05f; // if it's fully grown, replant and their growths start at 5%.
-                        }
+                        break;
+                    }
+                    k.Growth += k.GrowthPerTick * GenDate.TicksPerDay * 0.55f; // 0.55 is 55% of time plant spent growing
+                    //debug_val[6] = k.GrowthPerTick;
+                    if (k.Growth >= 1.0f)
+                    {
+                        projectedRecords[day].hay_yield.max += haygrass_yieldMax;
+                        projectedRecords[day].hay_yield.min += haygrass_yieldMin;
+                        k.Growth = Plant.BaseGrowthPercent; // if it's fully grown, replant and their growths start at 5%.
                     }
                 }
+                
                 projectedRecords[day].hay_stock.max += projectedRecords[day].hay_yield.max;
                 projectedRecords[day].hay_stock.min += projectedRecords[day].hay_yield.min;
                 projectedRecords[day].hay_stock.max -= dailyHayConsumption;
@@ -417,7 +421,7 @@ namespace FoodAnalyticsTab
             string analysis = "Number of animals you have = " + (int)numAnimals + ", hay animals = " + numRoughAnimals + ", kibble animals = " + numKibbleAnimals +
                             "\nNumber of hay in stockpiles and on the floors = " + (int)numHay + ", number of meat = " + numMeat +
                             "\nEstimated number of hay needed daily for hay-eaters only= " + (int)totalNeededHay +
-                            "\nEstimated number of kibble needed for all kibble-eaters = " + (int) dailyKibbleConsumption +
+                            "\nEstimated number of kibble needed for all kibble-eaters = " + (int)dailyKibbleConsumption +
                             "\nEstimated number of hay needed daily for all animals = " + (int)dailyHayConsumption +
                             "\nNumber of days until hay in stockpiles run out = " + String.Format("{0:0.0}", numHay / dailyHayConsumption) +
                             "\nDays Until Winter = " + this.daysUntilWinter + ", Days until growing period over = " + this.daysUntilGrowingPeriodOver +
@@ -429,11 +433,11 @@ namespace FoodAnalyticsTab
                             "\nEstimated number of hay needed yearly for hay-eaters only = " + (int)(totalNeededHay * GenDate.DaysPerMonth * GenDate.MonthsPerYear) + // 60 days
                             "\nEstimated number of hay needed yearly for all animals = " + (int)(dailyHayConsumption * GenDate.DaysPerMonth * GenDate.MonthsPerYear) + // 60 days
                             "\nEstimated number of hay needed until next harvest season(10th of Spring) for all animals = " + (int)(dailyHayConsumption * this.daysUntilNextHarvestSeason) +
-                            "\nNumber of haygrass plant = " + (int)numHaygrass +
+                            "\nNumber of haygrass plant = " + (int)numHaygrass + ", outdoor = " + allHaygrassGrowth.Where(h => h.IsOutdoor).Count() +
                             "\nEstimate of projected harvest production:\n";
             analysis += "Day\t Max Yield Min Yield Max Stock Min Stock\n";
             int i = 0;
-            foreach (prediction k in projectedRecords)
+            foreach (Prediction k in projectedRecords)
             {
                 analysis += String.Format("{0,-2}\t {1,-6}\t {2,-6}\t {3,-6}\t {4,-6}\n",
                     i, (int)k.hay_yield.max, (int)k.hay_yield.min, (int)k.hay_stock.max, (int)k.hay_stock.min);
@@ -471,9 +475,12 @@ namespace FoodAnalyticsTab
             graphList[0].SetCurve("Hay Stock(Min)", Color.magenta, projectedRecords.Select(y => y.hay_stock.min).ToList());
             graphList[0].SetCurve("Meat Stock", Color.blue, projectedRecords.Select(y => y.meat_stock.max).ToList());
 
-            Widgets.BeginScrollView(rect, ref this.scrollPos[(int)FoodAnalyticsTab.Graph], new Rect(0, 0, rect.width, rect.height*2));
+            Widgets.BeginScrollView(rect, ref this.scrollPos[(int)FoodAnalyticsTab.Graph], new Rect(0, 0, rect.width, rect.height*2)); //TODO: figure out how to obtain viewRect
             //nextNDays = (int) graphList[0].Draw(rect);
-            graphList[0].Draw(rect);
+            foreach (LineGraph g in graphList)
+            {
+                g.Draw(rect);
+            }
 
             Widgets.EndScrollView();
         }
