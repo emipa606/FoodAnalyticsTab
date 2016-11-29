@@ -697,7 +697,7 @@ namespace FoodAnalyticsTab
             Rect btn = new Rect(0, 0, 110f, 40f);
             if (Widgets.ButtonText(btn, "Add Graph", true, false, true))
             {
-                graphList.Add(graphList[0]);
+                graphList.Add(new LineGraph(graphList[0]));
             }
             Rect newRect = new Rect(0, btn.yMax, rect.width, rect.height);
             foreach (LineGraph g in graphList)
