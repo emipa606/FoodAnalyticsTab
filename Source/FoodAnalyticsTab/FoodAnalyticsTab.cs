@@ -26,7 +26,8 @@ namespace FoodAnalyticsTab
         {
             Graph= 0,
             Analytics = 1,
-            Help = 2
+            Help = 2,
+            DetailedList = 3
         }
         private MainTabWindow_Estimator.FoodAnalyticsTab curTab = FoodAnalyticsTab.Graph, prevTab = FoodAnalyticsTab.Analytics;
         Vector2[] scrollPos = new Vector2[3] { Vector2.zero, Vector2.zero, Vector2.zero }; // for scrolling view
@@ -36,7 +37,7 @@ namespace FoodAnalyticsTab
 
         // analytics
         private float totalNeededHay, dailyKibbleConsumption, dailyHayConsumption;
-        private int numAnimals, numRoughAnimals, numKibbleAnimals, numHaygrass, numHay, numMeat;
+        private int numAnimals, numRoughAnimals, numKibbleAnimals, numHaygrass, numHay, numMeat, numEgg, numHen;
         private class Prediction
         {
             public class MinMax
@@ -421,16 +422,20 @@ namespace FoodAnalyticsTab
 
         private void GetInGameData()
         {
-            var pawns = (from p in Find.MapPawns.PawnsInFaction(Faction.OfPlayer)
-                         select p).ToList();
+            var pawns = Find.MapPawns.PawnsInFaction(Faction.OfPlayer);
             var allHaygrass = Find.ListerThings.AllThings.Where(x => x.Label == "haygrass");
             numMeat = Find.ResourceCounter.GetCountIn(ThingCategoryDefOf.MeatRaw);
+            numEgg = Find.ListerThings.AllThings.Where(x => x.def.defName == "EggChickenUnfertilized").Count();
             numAnimals = pawns.Where(x => x.RaceProps.Animal).Count();
 
             var roughAnimals = pawns
                            .Where(x => x.RaceProps.Animal && x.RaceProps.Eats(FoodTypeFlags.Plant));
             numRoughAnimals = roughAnimals.Count();
-            totalNeededHay = roughAnimals
+            numHen = roughAnimals.
+                Where(x => x.def.defName == "Chicken" && x.gender == Gender.Female && 
+                      x.ageTracker.CurLifeStage.defName == "AnimalAdult").Count(); // x.def.defName == "Chicken" worked, but x.Label == "chicken" didn't work
+
+            totalNeededHay = roughAnimals.Where(a => a.Position.GetRoomOrAdjacent().UsesOutdoorTemperature)
                            .Sum(x => x.needs.food.FoodFallPerTick) * GenDate.TicksPerDay / hayNut;
             debug_val[1] = hayNut;
             //TODO: find animals' hunger rate when they are full instead whatever state they are in now.
@@ -584,6 +589,10 @@ namespace FoodAnalyticsTab
             {
                 this.curTab = FoodAnalyticsTab.Help;
             }, this.curTab == FoodAnalyticsTab.Help));
+            list.Add(new TabRecord("Detailed List", delegate
+            {
+                this.curTab = FoodAnalyticsTab.DetailedList;
+            }, this.curTab == FoodAnalyticsTab.DetailedList));
 
             TabDrawer.DrawTabs(rect2, list);
 
@@ -599,6 +608,10 @@ namespace FoodAnalyticsTab
             {
                 this.DisplayHelpPage(rect2);
                 //this.prevTab = FoodAnalyticsTab.Graph;
+            } else if (this.curTab == FoodAnalyticsTab.DetailedList)
+            {
+                this.DisplayDetailedListPage(rect2);
+                //this.prevTab = FoodAnalyticsTab.Graph;
             }
         }
 
@@ -606,7 +619,8 @@ namespace FoodAnalyticsTab
         {
             // constructing string
             string analysis = "Number of animals you have = " + (int)numAnimals + ", hay animals = " + numRoughAnimals + ", kibble animals = " + numKibbleAnimals +
-                            "\nNumber of hay in stockpiles and on the floors = " + (int)numHay + ", number of meat = " + numMeat +
+                            "\nNumber of hay in stockpiles and on the floors = " + (int)numHay + ", number of meat = " + numMeat + ", number of egg = " + numEgg +
+                            "\nNumber of chicken = " + numHen +
                             "\nEstimated number of hay needed daily for hay-eaters only= " + (int)totalNeededHay +
                             "\nEstimated number of kibble needed for all kibble-eaters = " + (int)dailyKibbleConsumption + ", meat =" + dailyKibbleConsumption*2/5 + ", egg=" + dailyKibbleConsumption*4/50 +
                             "\nEstimated number of hay needed daily for all animals = " + (int)dailyHayConsumption +
@@ -662,6 +676,7 @@ namespace FoodAnalyticsTab
             graphList[0].SetCurve("Hay Stock(Max)", Color.white, projectedRecords.Select(y => y.hay_stock.max).ToList());
             graphList[0].SetCurve("Hay Stock(Min)", Color.magenta, projectedRecords.Select(y => y.hay_stock.min).ToList());
             graphList[0].SetCurve("Meat Stock", Color.blue, projectedRecords.Select(y => y.meat_stock.max).ToList());
+            //graphList[0].SetCurve("Egg Stock", Color.yellow, projectedRecords.Select(y => y.meat_stock.max).ToList());
 
             Widgets.BeginScrollView(rect, ref this.scrollPos[(int)FoodAnalyticsTab.Graph], new Rect(0, 0, rect.width, rect.height*2)); //TODO: figure out how to obtain viewRect
             //nextNDays = (int) graphList[0].Draw(rect);
@@ -674,6 +689,10 @@ namespace FoodAnalyticsTab
         }
 
         private void DisplayHelpPage(Rect rect)
+        {
+
+        }
+        private void DisplayDetailedListPage(Rect rect)
         {
 
         }
