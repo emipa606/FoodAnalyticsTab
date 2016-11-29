@@ -716,7 +716,7 @@ namespace FoodAnalyticsTab
         private void DisplayDetailedListPage(Rect rect)
         {
             GUI.BeginGroup(rect);
-            Widgets.ButtonText(new Rect(0, 0, 110f, 40f), "Last30Days".Translate(), true, false, true);
+            Widgets.ButtonText(new Rect(0, 0, 110f, 40f), "test".Translate(), true, false, true);
             GUI.EndGroup();
         }
     }
