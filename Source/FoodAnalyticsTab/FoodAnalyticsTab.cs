@@ -128,9 +128,10 @@ namespace FoodAnalyticsTab
 
             private float scrollPos_curr;
             private float scrollPos_prev;
-            public Rect rect { get; set; }
+            public Rect rect;
             public bool changed { get { return (int) scrollPos_curr != (int) scrollPos_prev; } }
             static int min_day = 1, max_day = 60;
+            public bool remove = false;
 
             public LineGraph(float default_day)
             {
@@ -187,12 +188,12 @@ namespace FoodAnalyticsTab
                     this.curves[label].curve.Add(new CurvePoint(day, points[day]));
                 }
             }
-            public Rect Draw(Rect rect)
+            public void Draw(Rect rect)
             {
                 curveDrawerStyle.FixedSection = new Vector2(0, this.scrollPos_curr);
                 curveDrawerStyle.MeasureLabelsXCount = (int)this.scrollPos_curr; // number of marks on x axis 
 
-                Rect graphRect = new Rect(rect.x, rect.y, rect.width * .95f, 450f);
+                Rect graphRect = new Rect(rect.x, rect.y, rect.width * .9f, 450f);
                 Rect legendRect = new Rect(rect.x, graphRect.yMax, graphRect.width, 40f);
                 Rect sliderRect = new Rect(rect.x, legendRect.yMax, graphRect.width, 50f);
 
@@ -201,7 +202,15 @@ namespace FoodAnalyticsTab
                 this.scrollPos_curr = Widgets.HorizontalSlider(sliderRect, this.scrollPos_curr, min_day, max_day);
 
                 this.rect = new Rect(graphRect.x, graphRect.y, graphRect.width, graphRect.height + legendRect.height + sliderRect.height);
-                return this.rect;
+
+                if (Widgets.ButtonText(new Rect(graphRect.xMax, graphRect.yMin, rect.width - graphRect.width, 40f), "Delete".Translate(), true, false, true))
+                {
+                    this.remove = true;
+                }
+                else
+                {
+                    this.remove = false;
+                }
             }
         }
 
@@ -730,19 +739,28 @@ namespace FoodAnalyticsTab
             graphList[0].SetCurve("Meat Stock", Color.blue, projectedRecords.Select(y => y.meat_stock.max).ToList());
             //graphList[0].SetCurve("Egg Stock", Color.yellow, projectedRecords.Select(y => y.meat_stock.max).ToList());
 
-            Widgets.BeginScrollView(rect, ref this.scrollPos[(int)FoodAnalyticsTab.Graph], new Rect(0, 0, graphList[0].rect.width, graphList[0].rect.height * graphList.Count())); //TODO: figure out how to obtain viewRect
+            Widgets.BeginScrollView(rect, ref this.scrollPos[(int)FoodAnalyticsTab.Graph], 
+                new Rect(rect.x, rect.y, graphList[0].rect.width, graphList[0].rect.height * graphList.Count())); //TODO: figure out how to obtain viewRect
             //nextNDays = (int) graphList[0].Draw(rect);
-            Rect btn = new Rect(0, 0, 110f, 40f);
+            Rect btn = new Rect(rect.xMin, rect.yMin, 110f, 40f);
             if (Widgets.ButtonText(btn, "Add Graph", true, false, true))
             {
                 graphList.Add(new LineGraph(graphList[0]));
             }
-            Rect newRect = new Rect(0, btn.yMax, rect.width, rect.height);
+            Rect newRect = new Rect(rect.xMin, btn.yMax, rect.width, rect.height);
             foreach (LineGraph g in graphList)
             {
-                Rect lastRect = g.Draw(newRect);
-                newRect = new Rect(lastRect.x, lastRect.yMax, rect.width, lastRect.height);
+                g.Draw(newRect);
+                if (g.remove == true)
+                {
+                    newRect = new Rect(g.rect.x, g.rect.yMin, rect.width, rect.height);
+                }
+                else
+                {
+                    newRect = new Rect(g.rect.x, g.rect.yMax, rect.width, rect.height);
+                }
             }
+            graphList.RemoveAll(g => g.remove == true);
 
             Widgets.EndScrollView();
         }
