@@ -379,6 +379,10 @@ namespace FoodAnalyticsTab
             {
                 analysis += v + ",";
             }
+            foreach (ThingDef x in plantDef)
+            {
+                analysis += x.defName + ",";
+            }
             analysis += ",\n" + GenDate.CurrentMonth + "," + GenDate.CurrentSeason + "," +
                                         GenDate.DayOfMonth + "," + GenDate.DayOfYear + "," +
                                         GenTicks.TicksAbs + "," + Find.TickManager.TicksAbs + ",";
