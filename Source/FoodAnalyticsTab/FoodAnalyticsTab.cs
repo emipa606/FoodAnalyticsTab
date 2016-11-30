@@ -38,63 +38,7 @@ namespace FoodAnalyticsTab
         // analytics
         private float dailyHayConsumptionIndoorAnimals, dailyKibbleConsumption, dailyHayConsumption, dailyHayConsumptionRoughAnimals;
         private int numAnimals, numRoughAnimals, numKibbleAnimals, numHaygrass, numHay, numMeat, numEgg, numHen, numColonist, numHerbivoreIndoor, numHerbivoreOutdoor;
-        private class Prediction
-        {
-            public class MinMax
-            {
-                public bool showDeficiency { get; set; } = false;
-                private float _min, _max;
-                public float min
-                {
-                    get { return _min; }
-                    set
-                    {
-                        _min = value;
-                        if (showDeficiency != true && value < 0)
-                        {
-                            _min = 0;
-                        }
-                    }
-                }
-                public float max
-                {
-                    get { return _max; }
-                    set
-                    {
-                        _max = value;
-                        if (showDeficiency != true && value < 0)
-                        {
-                           _max = 0;        
-                        }
-                    }
-                }
-            }
-            private bool _showDeficiency;
-            public bool showDeficiency
-            {
-                get { return _showDeficiency; }
-                set
-                {
-                    _showDeficiency = hay_yield.showDeficiency = hay_stock.showDeficiency = meat_stock.showDeficiency =
-                        animal_population.showDeficiency = hay_consumption.showDeficiency = value;
-                }
-            }
-
-            public Prediction(MinMax a, MinMax b, MinMax c, MinMax d, MinMax e )
-            {
-                hay_yield = a;
-                hay_stock = b;
-                hay_consumption = c;
-                meat_stock = d;
-                animal_population = e;
-                showDeficiency = false;
-            }
-            public MinMax hay_yield { get; set; }
-            public MinMax hay_stock { get; set; }
-            public MinMax meat_stock { get; set; }
-            public MinMax animal_population { get; set; }
-            public MinMax hay_consumption { get; set; }
-        };
+        
 
         private static int nextNDays = 60; // default display 25 days
 
@@ -120,301 +64,9 @@ namespace FoodAnalyticsTab
         private int daysUntilNextHarvestSeason; // to 10th of Spring, April 5th
         static float hayNut = 0, haygrass_yieldMax = 0, haygrass_yieldMin = 0;
 
-        private class LineGraph
-        {
-            private List<CurveMark> marks = new List<CurveMark>();
-            private Dictionary<String, SimpleCurveDrawInfo> curves = new Dictionary<String, SimpleCurveDrawInfo>();
-            private SimpleCurveDrawerStyle curveDrawerStyle = new SimpleCurveDrawerStyle();
-
-            private float scrollPos_curr;
-            private float scrollPos_prev;
-            public Rect rect;
-            public bool changed { get { return (int) scrollPos_curr != (int) scrollPos_prev; } }
-            static int min_day = 1, max_day = 60;
-            public bool remove = false;
-
-            public LineGraph(float default_day)
-            {
-                this.scrollPos_curr = this.scrollPos_prev = default_day;
-                SetDefaultStyle();
-            }
-            public LineGraph(LineGraph lg) 
-            {
-                this.scrollPos_curr = this.scrollPos_prev = lg.scrollPos_curr;
-                SetDefaultStyle();
-                this.marks = new List<CurveMark>(lg.marks);
-                this.curves = new Dictionary<String, SimpleCurveDrawInfo> (lg.curves);
-            }
-            private void SetDefaultStyle()
-            {
-                curveDrawerStyle.UseFixedSection = true;
-                curveDrawerStyle.FixedSection = new Vector2(0, scrollPos_curr);
-                curveDrawerStyle.LabelY = "Hay #";
-                curveDrawerStyle.LabelX = "Day";
-                curveDrawerStyle.UseFixedScale = false;
-                curveDrawerStyle.DrawBackground = true; // draw gray background behind graph
-                curveDrawerStyle.DrawBackgroundLines = true; // 
-                curveDrawerStyle.DrawMeasures = true;
-                curveDrawerStyle.MeasureLabelsXCount = (int)this.scrollPos_curr; // number of marks on x axis 
-                curveDrawerStyle.MeasureLabelsYCount = 5;
-                curveDrawerStyle.DrawPoints = false; // draw white points for each data
-                curveDrawerStyle.DrawLegend = true; //
-                curveDrawerStyle.DrawCurveMousePoint = true; // hover over graph shows details
-                curveDrawerStyle.UseAntiAliasedLines = true; // smooth lines
-            }
-            public void SetMarks(float x, string message, Color color)
-            {
-                if (!this.marks.Where(s => s.message == message).Any()) {
-                    this.marks.Add(new CurveMark(x, message, color));
-                    this.marks.Add(new CurveMark(x, message, color)); // fix i++ bug.
-                } else {
-                    foreach (CurveMark m in this.marks.Where(s => s.message == message))
-                    {
-                        m.x = x;
-                    }
-                }
-            }
-            public void SetCurve(String label, Color color, List<float> points)
-            {
-                if (!this.curves.ContainsKey(label))
-                {
-                    this.curves.Add(label, new SimpleCurveDrawInfo());
-                    this.curves[label].color = color;
-                    this.curves[label].label = label;
-                }
-                this.curves[label].curve = new SimpleCurve();
-                for (int day = 0; day < points.Count(); day++)
-                {
-                    this.curves[label].curve.Add(new CurvePoint(day, points[day]));
-                }
-            }
-            public void Draw(Rect rect)
-            {
-                curveDrawerStyle.FixedSection = new Vector2(0, this.scrollPos_curr);
-                curveDrawerStyle.MeasureLabelsXCount = (int)this.scrollPos_curr; // number of marks on x axis 
-
-                Rect graphRect = new Rect(rect.x, rect.y, rect.width * .9f, 450f);
-                Rect legendRect = new Rect(rect.x, graphRect.yMax, graphRect.width, 40f);
-                Rect sliderRect = new Rect(rect.x, legendRect.yMax, graphRect.width, 50f);
-
-                SimpleCurveDrawer.DrawCurves(graphRect, this.curves.Values.ToList(), this.curveDrawerStyle, this.marks, legendRect);
-                this.scrollPos_prev = this.scrollPos_curr;
-                this.scrollPos_curr = Widgets.HorizontalSlider(sliderRect, this.scrollPos_curr, min_day, max_day);
-
-                this.rect = new Rect(graphRect.x, graphRect.y, graphRect.width, graphRect.height + legendRect.height + sliderRect.height);
-
-                if (Widgets.ButtonText(new Rect(graphRect.xMax, graphRect.yMin, rect.width - graphRect.width, 40f), "Delete".Translate(), true, false, true))
-                {
-                    this.remove = true;
-                }
-                else
-                {
-                    this.remove = false;
-                }
-            }
-        }
-
         List<LineGraph> graphList = new List<LineGraph>() {new LineGraph(nextNDays) };
 
-        /* settings for each graph:
-           what data to show
-             projected yield, stock, population
-             work, time
-
-           show deficiency
-           
-           internal:
-             SimpleCurveDrawerStyle
-             are settings changed        
-        */
-
-        /* prediction class:
-           making prediction 
-           types: crop/population/meat yield, vegie/meat/meal/drug/leather/population stock, 
-           
-           type of update: 1st day, after
-           data structure
-           list of crops
-             yield
-             stock
-             consumption
-           
-           model:
-           1.
-           chicken -> egg--↘
-           animals -> meat -> kibble -> carnivores animal
-           merchant->       ^ meals -> conlonists
-           hunting ->       | training -> animals
-                            |           ^
-                            |__ work    |__ work
-           2.
-           growers -> haygrass -> hay -> herbivores
-                    ^           ^     ↘ kibble
-                    |           |
-                    |__planting |__harvesting
-           3.
-           grower -> rice plant -> rice -------------> meals -> colonist
-                  -> corn plant -> corn                      |
-                  -> potato plant -> potato                  |
-                  -> strawberry plant -> strawberry ----------
-           4.
-           cotton
-           muffalo     -> wool -> armchair, 
-           alpaca              -> clothing
-           Megatherium         -> medicine
-           Dromedary
-
-        */
-        /*
-           data selector checkbox
-           add graph button
-        */
-        private class Prediction2
-        {
-            private class PlantGrowth
-            {
-                public PlantGrowth(float a, float b)
-                {
-                    Growth = a;
-                    GrowthPerTick = b;
-                }
-                public float Growth { get; set; }
-                public float GrowthPerTick { get; set; }
-                public bool IsOutdoor { get; set; }
-            };
-            private class Prediction // should contain update rule
-            {
-                public class MinMax
-                {
-                    public bool showDeficiency { get; set; } = false;
-                    private float _min, _max;
-                    public float min
-                    {
-                        get { return _min; }
-                        set
-                        {
-                            _min = value;
-                            if (showDeficiency != true && value < 0)
-                            {
-                                _min = 0;
-                            }
-                        }
-                    }
-                    public float max
-                    {
-                        get { return _max; }
-                        set
-                        {
-                            _max = value;
-                            if (showDeficiency != true && value < 0)
-                            {
-                                _max = 0;
-                            }
-                        }
-                    }
-
-                }
-                public class PredTerm
-                {
-                    public MinMax yield, consumption, stock;
-                    public bool enabled;
-                    public void SetUpdateRule(float v0, float v)
-                    {
-
-                    }
-                    public void UpdateOnce()
-                    {
-
-                    }
-                }
-                private bool _showDeficiency;
-                public bool showDeficiency
-                {
-                    get { return _showDeficiency; }
-                    set
-                    {
-                        //_showDeficiency = hay_yield.showDeficiency = hay_stock.showDeficiency = meat_stock.showDeficiency =
-                         //   animal_population.showDeficiency = hay_consumption.showDeficiency = value;
-                    }
-                }
-                public bool enabled { get; set; }
-
-                public Prediction(MinMax a, MinMax b, MinMax c, MinMax d, MinMax e)
-                {
-                    showDeficiency = false;
-                }
-                public List<PredTerm> PredTerms { get; set; }
-
-                public void update() {
-                    if (enabled)
-                    {
-                        /*
-                        // crop
-                        if (GenDate.HourOfDay >= 4 && GenDate.HourOfDay <= 19)
-                        {
-                            if (allHaygrassGrowth.LastOrDefault().Growth >= 1.0f)
-                            {
-                                allHaygrassGrowth.LastOrDefault().Growth = Plant.BaseGrowthPercent;
-                                projectedRecords[0].hay_yield.max += haygrass_yieldMax;
-                                projectedRecords[0].hay_yield.min += haygrass_yieldMin;
-                            }
-                            projectedRecords[0].hay_stock.max += projectedRecords[0].hay_yield.max;
-                            projectedRecords[0].hay_stock.min += projectedRecords[0].hay_yield.min;
-                        }
-                        stock. -= GenDate.CurrentDayPercent * dailyHayConsumption; // only count the rest of day
-                        projectedRecords[0].hay_stock.min -= GenDate.CurrentDayPercent * dailyHayConsumption;
-                        projectedRecords[0].meat_stock.max -= GenDate.CurrentDayPercent * dailyKibbleConsumption * 2f / 5f; // convert every 50 kibbles to 20 meat
-                        projectedRecords[0].meat_stock.min -= GenDate.CurrentDayPercent * dailyKibbleConsumption * 2f / 5f;
-
-                        // calculate yields and stocks after today
-                        for (int day = 1; day < nextNDays; day++)
-                        {
-                            projectedRecords.Add(
-                                new Prediction(
-                                    new Prediction.MinMax { min = 0, max = 0 },
-                                    new Prediction.MinMax { max = projectedRecords[day - 1].hay_stock.max, min = projectedRecords[day - 1].hay_stock.min },
-                                    new Prediction.MinMax { max = projectedRecords[day - 1].hay_consumption.max, min = projectedRecords[day - 1].hay_consumption.min },
-                                    new Prediction.MinMax { max = projectedRecords[day - 1].meat_stock.max, min = projectedRecords[day - 1].meat_stock.min },
-                                    new Prediction.MinMax { max = projectedRecords[day - 1].animal_population.max, min = projectedRecords[day - 1].animal_population.min }));
-
-                            foreach (PlantGrowth k in allHaygrassGrowth)
-                            {
-                                if (k.IsOutdoor && !(day <= daysUntilGrowingPeriodOver))
-                                {
-                                    break;
-                                }
-                                k.Growth += k.GrowthPerTick * GenDate.TicksPerDay * 0.55f; // 0.55 is 55% of time plant spent growing
-                                                                                           //debug_val[6] = k.GrowthPerTick;
-                                if (k.Growth >= 1.0f)
-                                {
-                                    projectedRecords[day].hay_yield.max += haygrass_yieldMax;
-                                    projectedRecords[day].hay_yield.min += haygrass_yieldMin;
-                                    k.Growth = Plant.BaseGrowthPercent; // if it's fully grown, replant and their growths start at 5%.
-                                }
-                            }
-
-                            projectedRecords[day].hay_stock.max += projectedRecords[day].hay_yield.max;
-                            projectedRecords[day].hay_stock.min += projectedRecords[day].hay_yield.min;
-                            projectedRecords[day].hay_stock.max -= dailyHayConsumption;
-                            projectedRecords[day].hay_stock.min -= dailyHayConsumption;
-                            projectedRecords[day].meat_stock.max -= dailyKibbleConsumption * 2f / 5f;
-                            projectedRecords[day].meat_stock.min -= dailyKibbleConsumption * 2f / 5f;
-                            */
-
-                        }
-                    }
-                
-            };
-            Dictionary<string, Prediction> all;
-            void MakePrediction(int days)
-            {
-                foreach (var t in this.all)
-                {
-                    t.Value.update();
-                }
-            }
-        }
-
+        List<ThingDef> plantDef;
         // functions
         public MainTabWindow_Estimator () : base()
         {
@@ -427,6 +79,7 @@ namespace FoodAnalyticsTab
                 (from d in DefDatabase<ThingDef>.AllDefs.Where(x => x.defName == "PlantHaygrass")
                  select d).FirstOrDefault().plant.harvestYield * 0.5f * 0.5f// 1st 0.5 is harvesting at 65% growth, 2nd 0.5 is lowest health.
                 );
+            plantDef = DefDatabase<ThingDef>.AllDefs.Where(x => x.plant != null).ToList();
         }
         public override Vector2 RequestedTabSize
         {
@@ -439,7 +92,11 @@ namespace FoodAnalyticsTab
         public override void PreOpen()
         {
             base.PreOpen();
-            UpdateCalculations();
+            if (Find.TickManager.Paused)
+            {
+                UpdateCalculations();
+            }
+
             lastUpdate = Time.time;
         }
 
@@ -485,6 +142,8 @@ namespace FoodAnalyticsTab
                     ((Plant)h).GrowthRate / (GenDate.TicksPerDay * h.def.plant.growDays)));
                 allHaygrassGrowth.Last().IsOutdoor = h.Position.GetRoomOrAdjacent().UsesOutdoorTemperature;
             }
+            // TODO: Find.ZoneManager.AllZones, potentially look at unplannted cells in growing zones and predict work amount and complete time.
+            // look at Zone_Growing class , ZoneManager class
         }
 
         private void MakePrediction()
@@ -625,7 +284,7 @@ namespace FoodAnalyticsTab
         public override void DoWindowContents(Rect inRect)
         {
             base.DoWindowContents(inRect);
-            if (GenTicks.TicksAbs - lastUpdateTick >= (GenDate.TicksPerHour/5)) // Find.TickManager.Paused
+            if (GenTicks.TicksAbs - lastUpdateTick >= (GenDate.TicksPerHour/6)) 
             {
                 lastUpdateTick = GenTicks.TicksAbs;
                 UpdateCalculations();
@@ -644,34 +303,29 @@ namespace FoodAnalyticsTab
             {
                 this.curTab = FoodAnalyticsTab.Analytics;
             }, this.curTab == FoodAnalyticsTab.Analytics));
-
-            list.Add(new TabRecord("Help", delegate
-            {
-                this.curTab = FoodAnalyticsTab.Help;
-            }, this.curTab == FoodAnalyticsTab.Help));
             list.Add(new TabRecord("Detailed List", delegate
             {
                 this.curTab = FoodAnalyticsTab.DetailedList;
             }, this.curTab == FoodAnalyticsTab.DetailedList));
+            list.Add(new TabRecord("Help", delegate
+            {
+                this.curTab = FoodAnalyticsTab.Help;
+            }, this.curTab == FoodAnalyticsTab.Help));
 
             TabDrawer.DrawTabs(rect2, list);
 
             if (this.curTab == FoodAnalyticsTab.Graph)
             {
                 this.DisplayGraphPage(rect2);
-                //this.prevTab = FoodAnalyticsTab.Graph;
             } else if (this.curTab == FoodAnalyticsTab.Analytics)
             {
                 this.DisplayAnalyticsPage(rect2);
-                //this.prevTab = FoodAnalyticsTab.Analytics;
             } else if (this.curTab == FoodAnalyticsTab.Help)
             {
                 this.DisplayHelpPage(rect2);
-                //this.prevTab = FoodAnalyticsTab.Graph;
             } else if (this.curTab == FoodAnalyticsTab.DetailedList)
             {
                 this.DisplayDetailedListPage(rect2);
-                //this.prevTab = FoodAnalyticsTab.Graph;
             }
         }
 
