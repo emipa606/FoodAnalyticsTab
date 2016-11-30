@@ -7,7 +7,7 @@
     <ProjectGuid>{D0516023-126C-450F-B919-A75C5C4DC488}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Lincore.FoodAnalyticsTab</RootNamespace>
+    <RootNamespace>FoodAnalyticsTab</RootNamespace>
     <AssemblyName>FoodAnalyticsTab</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
@@ -51,6 +51,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="FoodAnalyticsTab.cs" />
+    <Compile Include="LineGraph.cs" />
+    <Compile Include="Prediction.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
