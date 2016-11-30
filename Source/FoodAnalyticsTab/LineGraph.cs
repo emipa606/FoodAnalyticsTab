@@ -13,7 +13,7 @@ namespace FoodAnalyticsTab
          projected yield, stock, population
          work, time
 
-       show deficiency
+       TODO:show deficiency
 
        internal:
          SimpleCurveDrawerStyle
@@ -27,7 +27,7 @@ namespace FoodAnalyticsTab
 
         private float scrollPos_curr;
         private float scrollPos_prev;
-        public Rect rect; // region defines this LineGraph
+        public Rect rect { get; private set; } // region defines this LineGraph
         public bool changed { get { return (int)scrollPos_curr != (int)scrollPos_prev; } }
         static int min_day = 1, max_day = 60;
         public bool remove = false;

@@ -12,6 +12,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.IO;
 using Verse;
 using RimWorld;
 using UnityEngine;
@@ -67,6 +68,15 @@ namespace FoodAnalyticsTab
         List<LineGraph> graphList = new List<LineGraph>() {new LineGraph(nextNDays) };
 
         List<ThingDef> plantDef;
+        [Serializable]
+        class DataPoint
+        {
+            string date;
+            public DataPoint(string s) {
+                date = s;
+            }
+        }
+        List<DataPoint> dpList = new List<DataPoint>();
         // functions
         public MainTabWindow_Estimator () : base()
         {
@@ -80,6 +90,9 @@ namespace FoodAnalyticsTab
                  select d).FirstOrDefault().plant.harvestYield * 0.5f * 0.5f// 1st 0.5 is harvesting at 65% growth, 2nd 0.5 is lowest health.
                 );
             plantDef = DefDatabase<ThingDef>.AllDefs.Where(x => x.plant != null).ToList();
+            dpList.Add(new DataPoint(GenDate.DateFullStringAt(GenTicks.TicksAbs)));
+            //ML.WriteToXmlFile<List<DataPoint>>("C://datapoint.xml", dpList);
+            //XmlSaver.SaveDataObject(dpList, "./datapoint.xml");
         }
         public override Vector2 RequestedTabSize
         {
@@ -96,8 +109,10 @@ namespace FoodAnalyticsTab
             {
                 UpdateCalculations();
             }
-
-            lastUpdate = Time.time;
+            //List<DataPoint> dpList = ML.ReadFromXmlFile<List<DataPoint>>("./datapoint.xml");
+            dpList.Add(new DataPoint(GenDate.DateFullStringAt(GenTicks.TicksAbs)));
+            //ML.WriteToXmlFile<List<DataPoint>>("datapoint.xml", dpList); // didn't work
+            ML.WriteToBinaryFile<List<DataPoint>>("datapoint.dat", dpList);// save file under main dir
         }
 
         private void GetInGameData()

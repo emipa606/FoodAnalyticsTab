@@ -52,6 +52,7 @@
   <ItemGroup>
     <Compile Include="FoodAnalyticsTab.cs" />
     <Compile Include="LineGraph.cs" />
+    <Compile Include="ML.cs" />
     <Compile Include="Prediction.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
