@@ -37,7 +37,7 @@ namespace FoodAnalyticsTab
 
         // analytics
         private float totalNeededHay, dailyKibbleConsumption, dailyHayConsumption;
-        private int numAnimals, numRoughAnimals, numKibbleAnimals, numHaygrass, numHay, numMeat, numEgg, numHen;
+        private int numAnimals, numRoughAnimals, numKibbleAnimals, numHaygrass, numHay, numMeat, numEgg, numHen, numColonist;
         private class Prediction
         {
             public class MinMax
@@ -438,6 +438,7 @@ namespace FoodAnalyticsTab
         {
             var pawns = Find.MapPawns.PawnsInFaction(Faction.OfPlayer);
             var allHaygrass = Find.ListerThings.AllThings.Where(x => x.Label == "haygrass");
+            numColonist = pawns.Where(x => x.RaceProps.Humanlike).Count();
             numMeat = Find.ResourceCounter.GetCountIn(ThingCategoryDefOf.MeatRaw);
             numEgg = Find.ListerThings.AllThings.Where(x => x.def.defName == "EggChickenUnfertilized").Count();
             numAnimals = pawns.Where(x => x.RaceProps.Animal).Count();
@@ -484,13 +485,16 @@ namespace FoodAnalyticsTab
                     new Prediction.MinMax { min = dailyHayConsumption , max = dailyHayConsumption },
                     new Prediction.MinMax { min = numMeat, max = numMeat },
                     new Prediction.MinMax { min = numAnimals, max = numAnimals }));
-            if (GenDate.HourOfDay >= 4 && GenDate.HourOfDay <= 19)
+            if (GenDate.HourOfDay >= 4 && GenDate.HourOfDay <= 19) // exclude resting plants' growth
             {
-                if (allHaygrassGrowth.LastOrDefault().Growth >= 1.0f)
+                foreach (PlantGrowth g in allHaygrassGrowth)
                 {
-                    allHaygrassGrowth.LastOrDefault().Growth = Plant.BaseGrowthPercent;
-                    projectedRecords[0].hay_yield.max += haygrass_yieldMax;
-                    projectedRecords[0].hay_yield.min += haygrass_yieldMin;
+                    if (g.Growth >= 1.0f)
+                    {
+                        g.Growth = Plant.BaseGrowthPercent;
+                        projectedRecords[0].hay_yield.max += haygrass_yieldMax;
+                        projectedRecords[0].hay_yield.min += haygrass_yieldMin;
+                    }
                 }
                 projectedRecords[0].hay_stock.max += projectedRecords[0].hay_yield.max;
                 projectedRecords[0].hay_stock.min += projectedRecords[0].hay_yield.min;
@@ -515,6 +519,7 @@ namespace FoodAnalyticsTab
                 {
                     if (k.IsOutdoor && !(day <= daysUntilGrowingPeriodOver))
                     {
+
                         break;
                     }
                     k.Growth += k.GrowthPerTick * GenDate.TicksPerDay * 0.55f; // 0.55 is 55% of time plant spent growing
@@ -633,6 +638,7 @@ namespace FoodAnalyticsTab
         {
             // constructing string
             string analysis = "Number of animals you have = " + (int)numAnimals + ", hay animals = " + numRoughAnimals + ", kibble animals = " + numKibbleAnimals +
+                            "\nNumber of colonist = " + numColonist +
                             "\nNumber of hay in stockpiles and on the floors = " + (int)numHay + ", number of meat = " + numMeat + ", number of egg = " + numEgg +
                             "\nNumber of hen = " + numHen +
                             "\nEstimated number of hay needed daily for hay-eaters only= " + (int)totalNeededHay +
