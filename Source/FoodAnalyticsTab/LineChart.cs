@@ -63,6 +63,7 @@ namespace FoodAnalyticsTab
         {
             this.scrollPos_curr = this.scrollPos_prev = default_day;
             setting.graphEnable = s;
+            setting.SetDefault();
             SetDefaultStyle();
         }
         public LineChart(LineChart lg)
