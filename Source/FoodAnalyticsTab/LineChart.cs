@@ -30,7 +30,7 @@ namespace FoodAnalyticsTab
 
         public ChartSettings()
         {
-            //SetDefault();
+            SetDefault();
         }
         public void SetDefault()
         {
