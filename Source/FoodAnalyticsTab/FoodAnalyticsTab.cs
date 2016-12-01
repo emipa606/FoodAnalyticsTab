@@ -422,15 +422,6 @@ namespace FoodAnalyticsTab
             
             if (!chartList.NullOrEmpty())
             {
-                //marks add dots on top of a graph, the text label is the text in the popup box
-                chartList[0].SetMarks(this.daysUntilNextHarvestSeason, "Days until the Next Harvest Season", Color.green);
-                chartList[0].SetMarks(this.daysUntilGrowingPeriodOver, "Days until Growing Period is Over", Color.red);
-                chartList[0].SetMarks(this.daysUntilWinter, "Days until the Winter", Color.white);
-                chartList[0].SetMarks(this.daysUntilEndofWinter, "Days until the End of Winter", Color.yellow);
-
-                // plotting graphs   
-
-
                 foreach (LineChart c in chartList)
                 {
                     c.UpdateData(ref predictor);
@@ -439,10 +430,14 @@ namespace FoodAnalyticsTab
                 Widgets.BeginScrollView(rect, ref this.scrollPos[(int)FoodAnalyticsTab.Graph],
                     new Rect(rect.x, rect.yMin, chartList[0].rect.width, chartList[0].rect.height * chartList.Count())); //TODO: figure out how to obtain viewRect
                                                                                                                       //nextNDays = (int) graphList[0].Draw(rect);
-
                 Rect newRect = new Rect(rect.xMin, btn.yMax, rect.width, rect.height);
                 foreach (LineChart g in chartList)
                 {
+                    //marks add dots on top of a graph, the text label is the text in the popup box
+                    g.SetMarks(this.daysUntilNextHarvestSeason, "Days until the Next Harvest Season", Color.green);
+                    g.SetMarks(this.daysUntilGrowingPeriodOver, "Days until Growing Period is Over", Color.red);
+                    g.SetMarks(this.daysUntilWinter, "Days until the Winter", Color.white);
+                    g.SetMarks(this.daysUntilEndofWinter, "Days until the End of Winter", Color.yellow);
                     g.Draw(newRect);
                     if (g.remove == true)
                     {

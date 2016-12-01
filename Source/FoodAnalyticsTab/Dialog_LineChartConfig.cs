@@ -5,6 +5,7 @@ using System.Text;
 using Verse;
 using RimWorld;
 using UnityEngine;
+using System.Globalization;
 
 namespace FoodAnalyticsTab
 {
@@ -38,6 +39,20 @@ namespace FoodAnalyticsTab
         {
         }
 
+        private void AddBinarySelector(ref Listing_Standard s, String on, String off, ref bool flag)
+        {
+            if (flag)
+            {
+                if (s.ButtonText(on, null))
+                {
+                    flag = false;
+                }
+            }
+            else if (s.ButtonText(off, null))
+            {
+                flag = true;
+            }
+        }
         public override void DoWindowContents(Rect inRect)
         {
             Text.Font = GameFont.Medium;
@@ -52,42 +67,12 @@ namespace FoodAnalyticsTab
                 this.setting.SetDefault();
             }
 
-            if (this.setting.ShowDeficiency)
-            {
-                if (listing_Standard.ButtonText("Deficiency", null))
-                {
-                    this.setting.ShowDeficiency = false;
-                }
-            }
-            else if (listing_Standard.ButtonText("No Deficiency", null))
-            {
-                this.setting.ShowDeficiency = true;
-            }
-
-            if (this.setting.DrawPoints)
-            {
-                if (listing_Standard.ButtonText("Draw Points", null))
-                {
-                    this.setting.DrawPoints = false;
-                }
-            }
-            else if (listing_Standard.ButtonText("No Points", null))
-            {
-                this.setting.DrawPoints = true;
-            }
-
-            if (this.setting.UseAntiAliasedLines)
-            {
-                if (listing_Standard.ButtonText("Anti-Alias", null))
-                {
-                    this.setting.UseAntiAliasedLines = false;
-                }
-            }
-            else if (listing_Standard.ButtonText("No Anti-Alias", null))
-            {
-                this.setting.UseAntiAliasedLines = true;
-            }
-
+            AddBinarySelector(ref listing_Standard, "Deficiency", "No Deficiency", ref this.setting.ShowDeficiency);
+            AddBinarySelector(ref listing_Standard, "Draw Points", "No Points", ref this.setting.DrawPoints);
+            AddBinarySelector(ref listing_Standard, "Anti-Alias", "No Anti-Alias", ref this.setting.UseAntiAliasedLines);
+            AddBinarySelector(ref listing_Standard, "Outdoor Animal", "No Outdoor Animal", ref this.setting.EnableOutdoorAnimalDetection);
+            AddBinarySelector(ref listing_Standard, "Growing Season", "No Growing Season", ref this.setting.EnableOutdoorNoGrowWinter);
+            
             // TODO: add floating menu here
             if (this.setting.predictorModel == Predictor.ModelType.learning)
             {
@@ -102,30 +87,6 @@ namespace FoodAnalyticsTab
                 {
                     this.setting.EnableLearning = true;
                 }
-            }
-
-            if (this.setting.EnableOutdoorAnimalDetection)
-            {
-                if (listing_Standard.ButtonText("Outdoor Animal", null))
-                {
-                    this.setting.EnableOutdoorAnimalDetection = false;
-                }
-            }
-            else if (listing_Standard.ButtonText("No Outdoor Animal", null))
-            {
-                this.setting.EnableOutdoorAnimalDetection = true;
-            }
-
-            if (this.setting.EnableOutdoorNoGrowWinter)
-            {
-                if (listing_Standard.ButtonText("Growing Season", null))
-                {
-                    this.setting.EnableOutdoorNoGrowWinter = false;
-                }
-            }
-            else if (listing_Standard.ButtonText("No Growing Season", null))
-            {
-                this.setting.EnableOutdoorNoGrowWinter = true;
             }
             /*
             if (listing_Standard.ButtonText(this.bill.repeatMode.GetLabel(), null))
@@ -209,7 +170,6 @@ namespace FoodAnalyticsTab
 
             Rect centerRect = new Rect(listerRect.xMax + 6f, titleRect.yMax, 280f, -1f);
             centerRect.yMax = inRect.height - this.CloseButSize.y - 6f;
-            //Dialog_GraphConfig.DoThingFilterConfigWindow(rect3, ref this.scrollPosition, this.bill.ingredientFilter, this.bill.recipe.fixedIngredientFilter, 4);
 
             Widgets.DrawMenuSection(centerRect, true);
             Text.Font = GameFont.Tiny;
@@ -238,7 +198,7 @@ namespace FoodAnalyticsTab
             foreach (String s in setting.graphEnable.Keys.ToList())
             {
                 bool flag = setting.graphEnable[s];
-                listing_Standard.CheckboxLabeled(s, ref flag);
+                listing_Standard.CheckboxLabeled(CultureInfo.CurrentCulture.TextInfo.ToTitleCase(s), ref flag);
                 setting.graphEnable[s] = flag;
             }
             listing_Standard.End();
