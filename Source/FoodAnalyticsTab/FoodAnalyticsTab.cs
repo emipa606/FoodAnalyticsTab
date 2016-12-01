@@ -57,7 +57,7 @@ namespace FoodAnalyticsTab
         };
         List<PlantGrowth> allHaygrassGrowth = new List<PlantGrowth>();
 
-        private float[] debug_val = new float[10];
+        public static float[] debug_val = new float[10];
         // important dates
         private int daysUntilWinter;// to Dec 1st
         private int daysUntilEndofWinter; // to February 5th
@@ -181,7 +181,6 @@ namespace FoodAnalyticsTab
                     new Prediction.MinMax { min = numAnimals, max = numAnimals }));
 
             float numTicksBeforeResting = 0;
-            debug_val[0] = GenDate.CurrentDayPercent;
             // exclude resting plants' growth
             if (GenDate.CurrentDayPercent < 0.25f) // if resting before 6am
             {
@@ -268,6 +267,7 @@ namespace FoodAnalyticsTab
             GetInGameData();
             UpdateDates();
             MakePrediction();
+            predictor.MakePrediction(0);
         }
         // calculating number of days until certain dates
         private void UpdateDates()
@@ -452,6 +452,7 @@ namespace FoodAnalyticsTab
             chartList.RemoveAll(g => g.remove == true);
 
             predictor.EnablePrediction(chartList);
+            
 
             Widgets.EndScrollView();
         }

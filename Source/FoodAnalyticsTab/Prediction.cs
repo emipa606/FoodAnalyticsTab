@@ -144,7 +144,7 @@ namespace FoodAnalyticsTab
             public ThingDef def;
             public bool enabled { get; set; }
             private List<GrowthTracker> allGrowth = new List<GrowthTracker>();
-            public List<DayPred> projectedPred = new List<DayPred>(1);
+            public List<DayPred> projectedPred = new List<DayPred>();
 
             public class MinMax
             {
@@ -223,13 +223,19 @@ namespace FoodAnalyticsTab
             }
             public void GetCurrentStat()
             {
+                allGrowth.Clear();
                 foreach (Thing h in Find.ListerThings.AllThings.Where(x => x.def.label == this.def.label)) // add current growth data
                 {
                     allGrowth.Add(new GrowthTracker(((Plant)h).Growth,
                         ((Plant)h).GrowthRate / (GenDate.TicksPerDay * h.def.plant.growDays)));
                     allGrowth.Last().IsOutdoor = h.Position.GetRoomOrAdjacent().UsesOutdoorTemperature;
                 }
-                projectedPred[0].stock = Find.ListerThings.AllThings.Where(x => x.def.label == this.def.plant.harvestedThingDef.label).Sum(x => x.stackCount);
+                //MainTabWindow_Estimator.debug_val[0] = allGrowth.Count();
+
+                projectedPred.Clear();
+                projectedPred.Add(new DayPred(0));
+                projectedPred.Last().stock.max = projectedPred.Last().stock.min = 
+                    Find.ListerThings.AllThings.Where(x => x.def.label == this.def.plant.harvestedThingDef.label).Sum(x => x.stackCount);
             }
 
             public void update()
@@ -326,7 +332,7 @@ namespace FoodAnalyticsTab
             }
         }
 
-        void MakePrediction(int days)
+        public void MakePrediction(int days)
         {
             // exclude resting plants' growth
             if (GenDate.CurrentDayPercent < 0.25f) // if resting before 6am
@@ -341,11 +347,14 @@ namespace FoodAnalyticsTab
             {
                 numTicksBeforeResting = (int) (GenDate.TicksPerDay * (0.8f - GenDate.CurrentDayPercent));
             }
-
+            UpdateDates();
             foreach (String s in this.allPredType.Keys)
             {
                 if (allPredType[s].enabled)
+                {
+                    allPredType[s].GetCurrentStat();
                     allPredType[s].update();
+                }
             }
         }
 
