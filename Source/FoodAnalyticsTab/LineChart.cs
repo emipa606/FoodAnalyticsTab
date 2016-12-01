@@ -70,7 +70,7 @@ namespace FoodAnalyticsTab
             curveDrawerStyle.DrawCurveMousePoint = true; // hover over graph shows details
             curveDrawerStyle.UseAntiAliasedLines = true; // smooth lines
 
-            foreach (ThingDef x in DefDatabase<ThingDef>.AllDefs.Where(x => x.plant != null && x.plant.Sowable))
+            foreach (ThingDef x in DefDatabase<ThingDef>.AllDefs.Where(x => x.plant != null && x.plant.Sowable).OrderBy(x => x.label))
             {
                 setting.graphEnable.Add(x.label, false);
             }
