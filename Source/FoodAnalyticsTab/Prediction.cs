@@ -149,8 +149,8 @@ namespace FoodAnalyticsTab
             public class MinMax
             {
                 public bool showDeficiency { get; set; } = false;
-                private float _min = 0, _max = 0;
-                public float min
+                private int _min = 0, _max = 0;
+                public int min
                 {
                     get { return _min; }
                     set
@@ -162,7 +162,7 @@ namespace FoodAnalyticsTab
                         }
                     }
                 }
-                public float max
+                public int max
                 {
                     get { return _max; }
                     set
@@ -179,12 +179,12 @@ namespace FoodAnalyticsTab
                 {
 
                 }
-                public MinMax(float max, float min)
+                public MinMax(int max, int min)
                 {
                     _max = max;
                     _min = min;
                 }
-                public static implicit operator MinMax(float val)
+                public static implicit operator MinMax(int val)
                 {
                     return new MinMax(val, val);
                 }
@@ -224,7 +224,7 @@ namespace FoodAnalyticsTab
             public void GetCurrentStat()
             {
                 allGrowth.Clear();
-                foreach (Thing h in Find.ListerThings.AllThings.Where(x => x.def.label == this.def.label)) // add current growth data
+                foreach (Thing h in Find.ListerThings.AllThings.Where(x => x.def.defName == this.def.defName)) // add current growth data
                 {
                     allGrowth.Add(new GrowthTracker(((Plant)h).Growth,
                         ((Plant)h).GrowthRate / (GenDate.TicksPerDay * h.def.plant.growDays)));
@@ -232,10 +232,13 @@ namespace FoodAnalyticsTab
                 }
                 //MainTabWindow_Estimator.debug_val[0] = allGrowth.Count();
 
-                projectedPred.Clear();
-                projectedPred.Add(new DayPred(0));
-                projectedPred.Last().stock.max = projectedPred.Last().stock.min = 
-                    Find.ListerThings.AllThings.Where(x => x.def.label == this.def.plant.harvestedThingDef.label).Sum(x => x.stackCount);
+                if (this.def.plant.harvestedThingDef != null)
+                {
+                    projectedPred.Clear();
+                    projectedPred.Add(new DayPred(0));
+                    projectedPred.Last().stock.max = projectedPred.Last().stock.min =
+                        Find.ListerThings.AllThings.Where(x => x.def.defName == this.def.plant.harvestedThingDef.defName).Sum(x => x.stackCount);
+                }
             }
 
             public void update()
@@ -251,8 +254,8 @@ namespace FoodAnalyticsTab
                         if (g.Growth >= 1.0f)
                         {
                             g.Growth = Plant.BaseGrowthPercent;
-                            projectedPred[0].yield.max = this.def.plant.harvestYield;
-                            projectedPred[0].yield.min = this.def.plant.harvestYield * 0.5f * .5f;
+                            projectedPred[0].yield.max = (int) (this.def.plant.harvestYield * Find.Storyteller.difficulty.cropYieldFactor);
+                            projectedPred[0].yield.min = (int) (this.def.plant.harvestYield * 0.5f * .5f * Find.Storyteller.difficulty.cropYieldFactor);
                         }
                     }
                     /*
@@ -291,8 +294,8 @@ namespace FoodAnalyticsTab
 
                             if (g.Growth >= 1.0f)
                             {
-                                projectedPred[day].yield.max += this.def.plant.harvestYield;
-                                projectedPred[day].yield.min += this.def.plant.harvestYield * 0.5f * 0.5f;
+                                projectedPred[day].yield.max += (int)this.def.plant.harvestYield;
+                                projectedPred[day].yield.min += (int)(this.def.plant.harvestYield * 0.5f * 0.5f);
                                 g.Growth = Plant.BaseGrowthPercent; // if it's fully grown, replant and their growths start at 5%.
                             }
                         }
@@ -324,7 +327,7 @@ namespace FoodAnalyticsTab
 
         public Predictor()
         {
-            plantDefs = DefDatabase<ThingDef>.AllDefs.Where(x => x.plant != null && x.plant.Sowable).ToList();
+            plantDefs = DefDatabase<ThingDef>.AllDefs.Where(x => x.plant != null && x.plant.Sowable && x.plant.harvestedThingDef != null).ToList();
             foreach (ThingDef x in plantDefs.OrderBy(x => x.label))
             {
                 predictionEnable.Add(CultureInfo.CurrentCulture.TextInfo.ToTitleCase(x.label.ToLower()), false);

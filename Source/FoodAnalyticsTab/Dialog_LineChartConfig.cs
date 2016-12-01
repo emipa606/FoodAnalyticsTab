@@ -103,6 +103,30 @@ namespace FoodAnalyticsTab
                     this.setting.EnableLearning = true;
                 }
             }
+
+            if (this.setting.EnableOutdoorAnimalDetection)
+            {
+                if (listing_Standard.ButtonText("Outdoor Animal", null))
+                {
+                    this.setting.EnableOutdoorAnimalDetection = false;
+                }
+            }
+            else if (listing_Standard.ButtonText("No Outdoor Animal", null))
+            {
+                this.setting.EnableOutdoorAnimalDetection = true;
+            }
+
+            if (this.setting.EnableOutdoorNoGrowWinter)
+            {
+                if (listing_Standard.ButtonText("Growing Season", null))
+                {
+                    this.setting.EnableOutdoorNoGrowWinter = false;
+                }
+            }
+            else if (listing_Standard.ButtonText("No Growing Season", null))
+            {
+                this.setting.EnableOutdoorNoGrowWinter = true;
+            }
             /*
             if (listing_Standard.ButtonText(this.bill.repeatMode.GetLabel(), null))
             {

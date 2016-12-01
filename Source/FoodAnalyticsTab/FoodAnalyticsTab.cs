@@ -65,10 +65,11 @@ namespace FoodAnalyticsTab
         private int daysUntilNextHarvestSeason; // to 10th of Spring, April 5th
         static float hayNut = 0, haygrass_yieldMax = 0, haygrass_yieldMin = 0;
 
-        List<LineChart> chartList = new List<LineChart>() {new LineChart(nextNDays) };
+        private Predictor predictor = new Predictor();
+        List<LineChart> chartList = new List<LineChart>();
 
         //List<ThingDef> plantDef = new List<ThingDef>();
-        private Predictor predictor = new Predictor();
+        
 
         [Serializable]
         class DataPoint
@@ -95,7 +96,9 @@ namespace FoodAnalyticsTab
                 (from d in DefDatabase<ThingDef>.AllDefs.Where(x => x.defName == "PlantHaygrass")
                  select d).FirstOrDefault().plant.harvestYield * 0.5f * 0.5f// 1st 0.5 is harvesting at 65% growth, 2nd 0.5 is lowest health.
                 );
-            //plantDef = DefDatabase<ThingDef>.AllDefs.Where(x => x.plant != null && x.plant.Sowable).ToList();
+
+            predictor.predictionEnable["Haygrass"] = true;
+            chartList.Add( new LineChart(nextNDays, ref predictor.predictionEnable));
 
             dpList.Add(new DataPoint(GenDate.DateFullStringAt(GenTicks.TicksAbs)));
             //ML.WriteToXmlFile<List<DataPoint>>("C://datapoint.xml", dpList);
@@ -264,9 +267,9 @@ namespace FoodAnalyticsTab
 
         private void UpdateCalculations()
         {
-            GetInGameData();
+            //GetInGameData();
             UpdateDates();
-            MakePrediction();
+            //MakePrediction();
             predictor.MakePrediction(0);
         }
         // calculating number of days until certain dates
@@ -416,12 +419,6 @@ namespace FoodAnalyticsTab
             chartList[0].SetMarks(this.daysUntilEndofWinter, "Days until the End of Winter", Color.yellow);
             
             // plotting graphs   
-            chartList[0].SetCurve("Hay Yield(Max)", Color.green, projectedRecords.Select(y => y.hay_yield.max).ToList());
-            chartList[0].SetCurve("Hay Yield(Min)", Color.red, projectedRecords.Select(y => y.hay_yield.min).ToList());
-            chartList[0].SetCurve("Hay Stock(Max)", Color.white, projectedRecords.Select(y => y.hay_stock.max).ToList());
-            chartList[0].SetCurve("Hay Stock(Min)", Color.magenta, projectedRecords.Select(y => y.hay_stock.min).ToList());
-            chartList[0].SetCurve("Meat Stock", Color.blue, projectedRecords.Select(y => y.meat_stock.max).ToList());
-            
 
             foreach (LineChart c in chartList) {
                 c.UpdateData(ref predictor);
@@ -434,7 +431,7 @@ namespace FoodAnalyticsTab
             if (Widgets.ButtonText(btn, "New Chart", true, false, true))
             {
                 //chartList.Add(new LineChart(chartList[0]));
-                chartList.Add(new LineChart(60));
+                chartList.Add(new LineChart(60, ref predictor.predictionEnable));
             }
             Rect newRect = new Rect(rect.xMin, btn.yMax, rect.width, rect.height);
             foreach (LineChart g in chartList)

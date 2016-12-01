@@ -24,7 +24,8 @@ namespace FoodAnalyticsTab
     public class ChartSettings
     {
         public Dictionary<String, bool> graphEnable = new Dictionary<String, bool>();
-        public bool ShowDeficiency, DrawPoints, UseAntiAliasedLines, EnableLearning;
+        public bool ShowDeficiency, DrawPoints, UseAntiAliasedLines, EnableLearning, EnableOutdoorAnimalDetection,
+            EnableOutdoorNoGrowWinter;
         public Predictor.ModelType predictorModel = Predictor.ModelType.iterative;
 
         public ChartSettings()
@@ -39,6 +40,8 @@ namespace FoodAnalyticsTab
             UseAntiAliasedLines = true;
             predictorModel = Predictor.ModelType.iterative;
             EnableLearning = false;
+            EnableOutdoorAnimalDetection = true;
+            EnableOutdoorNoGrowWinter = true;
         }
     }
 
@@ -56,9 +59,10 @@ namespace FoodAnalyticsTab
         public bool remove = false;
         public ChartSettings setting = new ChartSettings();
 
-        public LineChart(float default_day)
+        public LineChart(float default_day, ref Dictionary<String, bool> s)
         {
             this.scrollPos_curr = this.scrollPos_prev = default_day;
+            setting.graphEnable = s;
             SetDefaultStyle();
         }
         public LineChart(LineChart lg)
@@ -67,6 +71,7 @@ namespace FoodAnalyticsTab
             SetDefaultStyle();
             this.marks = new List<CurveMark>(lg.marks);
             this.curves = new Dictionary<String, SimpleCurveDrawInfo>(lg.curves);
+            this.setting.graphEnable = lg.setting.graphEnable;
         }
         private void SetDefaultStyle()
         {
@@ -85,10 +90,6 @@ namespace FoodAnalyticsTab
             curveDrawerStyle.DrawCurveMousePoint = true; // hover over graph shows details
             curveDrawerStyle.UseAntiAliasedLines = true; // smooth lines
 
-            foreach (ThingDef x in DefDatabase<ThingDef>.AllDefs.Where(x => x.plant != null && x.plant.Sowable).OrderBy(x => x.label))
-            {
-                setting.graphEnable.Add(CultureInfo.CurrentCulture.TextInfo.ToTitleCase(x.label.ToLower()), false);
-            }
         }
 
         public void SetMarks(float x, string message, Color color)
@@ -163,8 +164,8 @@ namespace FoodAnalyticsTab
             //foreach (Predictor.PredType t in predictor.allPredType.Values.Where(p => p.enabled == true))
             foreach (String s in this.setting.graphEnable.Where(x => x.Value == true).Select(x => x.Key))
             {
-                this.SetCurve(s + " Yield(Max)", Color.green, predictor.allPredType[s].projectedPred.Select(x => x.yield.max).ToList());
-                this.SetCurve(s + " Yield(Min)", Color.red, predictor.allPredType[s].projectedPred.Select(x => x.yield.min).ToList());
+                this.SetCurve(s + " Yield(Max)", Color.green, predictor.allPredType[s].projectedPred.Select(x => (float) x.yield.max).ToList());
+                this.SetCurve(s + " Yield(Min)", Color.red, predictor.allPredType[s].projectedPred.Select(x => (float)x.yield.min).ToList());
             }
 
             foreach (String s in this.setting.graphEnable.Where(x => x.Value == false).Select(x => x.Key))
