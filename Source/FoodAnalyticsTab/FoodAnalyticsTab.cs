@@ -89,7 +89,7 @@ namespace FoodAnalyticsTab
                 (from d in DefDatabase<ThingDef>.AllDefs.Where(x => x.defName == "PlantHaygrass")
                  select d).FirstOrDefault().plant.harvestYield * 0.5f * 0.5f// 1st 0.5 is harvesting at 65% growth, 2nd 0.5 is lowest health.
                 );
-            plantDef = DefDatabase<ThingDef>.AllDefs.Where(x => x.plant != null).ToList();
+            plantDef = DefDatabase<ThingDef>.AllDefs.Where(x => x.plant != null && x.plant.Sowable).ToList();
             dpList.Add(new DataPoint(GenDate.DateFullStringAt(GenTicks.TicksAbs)));
             //ML.WriteToXmlFile<List<DataPoint>>("C://datapoint.xml", dpList);
             //XmlSaver.SaveDataObject(dpList, "./datapoint.xml");

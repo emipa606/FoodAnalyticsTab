@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using Verse;
 using RimWorld;
 using UnityEngine;
@@ -19,6 +20,11 @@ namespace FoodAnalyticsTab
          SimpleCurveDrawerStyle
          are settings changed        
     */
+
+    public class GraphSetting
+    {
+        public bool showDeficiency = false;
+    }
     class LineGraph
     {
         private List<CurveMark> marks = new List<CurveMark>();
@@ -31,6 +37,9 @@ namespace FoodAnalyticsTab
         public bool changed { get { return (int)scrollPos_curr != (int)scrollPos_prev; } }
         static int min_day = 1, max_day = 60;
         public bool remove = false;
+
+
+        public GraphSetting setting = new GraphSetting();
 
         public LineGraph(float default_day)
         {
@@ -105,10 +114,18 @@ namespace FoodAnalyticsTab
 
             this.rect = new Rect(graphRect.x, graphRect.y, graphRect.width, graphRect.height + legendRect.height + sliderRect.height);
 
-            if (Widgets.ButtonText(new Rect(graphRect.xMax, graphRect.yMin, rect.width - graphRect.width, 40f), "Delete".Translate(), true, false, true))
+            Rect deleteBtn = new Rect(graphRect.xMax + 6, graphRect.yMin, (rect.width - graphRect.width)/1.5f, 40f);
+            if (Widgets.ButtonText(deleteBtn, "Delete".Translate(), true, true, true))
             {
                 this.remove = true;
             }
+            if (Widgets.ButtonText(new Rect(deleteBtn.x, deleteBtn.yMax, deleteBtn.width, deleteBtn.height),"Detail", true, true, true))
+            {
+                Find.WindowStack.Add(new Dialog_GraphConfig(this.setting));
+            }
         }
+
+        
     }
+
 }

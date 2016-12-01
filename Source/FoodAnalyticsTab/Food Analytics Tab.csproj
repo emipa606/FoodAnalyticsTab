@@ -50,6 +50,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Dialog_GraphConfig.cs" />
     <Compile Include="FoodAnalyticsTab.cs" />
     <Compile Include="LineGraph.cs" />
     <Compile Include="ML.cs" />
