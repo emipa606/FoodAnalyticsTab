@@ -164,8 +164,10 @@ namespace FoodAnalyticsTab
             //foreach (Predictor.PredType t in predictor.allPredType.Values.Where(p => p.enabled == true))
             foreach (String s in this.setting.graphEnable.Where(x => x.Value == true).Select(x => x.Key))
             {
-                this.SetCurve(s + " Yield(Max)", Color.green, predictor.allPredType[s].projectedPred.Select(x => (float) x.yield.max).ToList());
-                this.SetCurve(s + " Yield(Min)", Color.red, predictor.allPredType[s].projectedPred.Select(x => (float)x.yield.min).ToList());
+                Color c1, c2;
+                GenerateRandomColorPair(this.setting.graphEnable.Keys.ToList().FindIndex(x => x == s), out c1, out c2);
+                this.SetCurve(s + " Yield(Max)", c1, predictor.allPredType[s].projectedPred.Select(x => (float) x.yield.max).ToList());
+                this.SetCurve(s + " Yield(Min)", c2, predictor.allPredType[s].projectedPred.Select(x => (float)x.yield.min).ToList());
             }
 
             foreach (String s in this.setting.graphEnable.Where(x => x.Value == false).Select(x => x.Key))
@@ -173,6 +175,13 @@ namespace FoodAnalyticsTab
                 this.RemoveCurve(s + " Yield(Max)");
                 this.RemoveCurve(s + " Yield(Min)");
             }
+        }
+        
+        private void GenerateRandomColorPair(int i, out Color c1, out Color c2)
+        {
+            float h =  (float) i / setting.graphEnable.Count();
+            c1 = Color.HSVToRGB(h, 0.7f, 0.75f);
+            c2 = Color.HSVToRGB(h, 0.3f, 0.75f);
         }
 
     }
