@@ -344,7 +344,7 @@ namespace FoodAnalyticsTab
 
             foreach (String s in this.allPredType.Keys)
             {
-                if (predictionEnable[s])
+                if (allPredType[s].enabled)
                     allPredType[s].update();
             }
         }

@@ -120,6 +120,13 @@ namespace FoodAnalyticsTab
                 this.curves[label].curve.Add(new CurvePoint(day, points[day]));
             }
         }
+        public void RemoveCurve(String label)
+        {
+            if (this.curves.ContainsKey(label))
+            {
+                this.curves.Remove(label);
+            }
+        }
         public void Draw(Rect rect)
         {
             curveDrawerStyle.FixedSection = new Vector2(0, this.scrollPos_curr);
@@ -156,8 +163,14 @@ namespace FoodAnalyticsTab
             //foreach (Predictor.PredType t in predictor.allPredType.Values.Where(p => p.enabled == true))
             foreach (String s in this.setting.graphEnable.Where(x => x.Value == true).Select(x => x.Key))
             {
-                this.SetCurve(s + "Yield(Max)", Color.green, predictor.allPredType[s].projectedPred.Select(x => x.yield.max).ToList());
-                this.SetCurve(s + "Yield(Min)", Color.red, predictor.allPredType[s].projectedPred.Select(x => x.yield.min).ToList());
+                this.SetCurve(s + " Yield(Max)", Color.green, predictor.allPredType[s].projectedPred.Select(x => x.yield.max).ToList());
+                this.SetCurve(s + " Yield(Min)", Color.red, predictor.allPredType[s].projectedPred.Select(x => x.yield.min).ToList());
+            }
+
+            foreach (String s in this.setting.graphEnable.Where(x => x.Value == false).Select(x => x.Key))
+            {
+                this.RemoveCurve(s + " Yield(Max)");
+                this.RemoveCurve(s + " Yield(Min)");
             }
         }
 
