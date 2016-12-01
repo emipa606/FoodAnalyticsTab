@@ -28,7 +28,7 @@ namespace FoodAnalyticsTab
             this.forcePause = false;
             this.doCloseX = true;
             this.closeOnEscapeKey = true;
-            this.doCloseButton = true;
+            this.doCloseButton = false;
             this.absorbInputAroundWindow = true;
             this.closeOnClickedOutside = true;
         }
@@ -164,7 +164,7 @@ namespace FoodAnalyticsTab
             centerRect.yMin = rect2.yMax;
             Rect viewRect = new Rect(0, 0f, centerRect.width - 16f, DefDatabase<ThingDef>.AllDefs.Where(x => x.plant != null && x.plant.Sowable).Count()*20);
             Widgets.BeginScrollView(centerRect, ref scrollPosition, viewRect);
-            listing_Standard = new Listing_Standard(new Rect(6, 0, viewRect.width, viewRect.height));
+            listing_Standard = new Listing_Standard(new Rect(6, 0, viewRect.width-6, viewRect.height));
             foreach (String s in setting.graphEnable.Keys.ToList())
             {
                 bool flag = setting.graphEnable[s];

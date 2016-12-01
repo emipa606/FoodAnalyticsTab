@@ -81,6 +81,10 @@ namespace FoodAnalyticsTab
         // functions
         public MainTabWindow_Estimator () : base()
         {
+
+            this.doCloseX = true;
+            this.doCloseButton = false;
+            this.closeOnClickedOutside = true;
             MainTabWindow_Estimator.hayNut = (from d in DefDatabase<ThingDef>.AllDefs.Where(x => x.defName == "Hay")
                                    select d).FirstOrDefault().ingestible.nutrition;
             MainTabWindow_Estimator.haygrass_yieldMax = GenMath.RoundRandom(
