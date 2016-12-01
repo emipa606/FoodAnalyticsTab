@@ -5,7 +5,7 @@ using System.Text;
 using Verse;
 using RimWorld;
 using UnityEngine;
-
+using System.Globalization;
 
 namespace FoodAnalyticsTab
 {
@@ -24,10 +24,14 @@ namespace FoodAnalyticsTab
     public class ChartSettings
     {
         public Dictionary<String, bool> graphEnable = new Dictionary<String, bool>();
-        public bool showDeficiency = false;
+        public bool ShowDeficiency = false;
+        public bool DrawPoints = false;
+        public bool UseAntiAliasedLines = false;
+        public Predictor.ModelType predictorModel = Predictor.ModelType.iterative;
+        public bool EnableLearning = false;
     }
 
-    class LineChart
+    public class LineChart
     {
         private List<CurveMark> marks = new List<CurveMark>();
         private Dictionary<String, SimpleCurveDrawInfo> curves = new Dictionary<String, SimpleCurveDrawInfo>();
@@ -39,7 +43,7 @@ namespace FoodAnalyticsTab
         public bool changed { get { return (int)scrollPos_curr != (int)scrollPos_prev; } }
         static int min_day = 1, max_day = 60;
         public bool remove = false;
-        private ChartSettings setting = new ChartSettings();
+        public ChartSettings setting = new ChartSettings();
 
         public LineChart(float default_day)
         {
@@ -57,7 +61,7 @@ namespace FoodAnalyticsTab
         {
             curveDrawerStyle.UseFixedSection = true;
             curveDrawerStyle.FixedSection = new Vector2(0, scrollPos_curr);
-            curveDrawerStyle.LabelY = "Hay #";
+            curveDrawerStyle.LabelY = "#";
             curveDrawerStyle.LabelX = "Day";
             curveDrawerStyle.UseFixedScale = false;
             curveDrawerStyle.DrawBackground = true; // draw gray background behind graph
@@ -72,9 +76,10 @@ namespace FoodAnalyticsTab
 
             foreach (ThingDef x in DefDatabase<ThingDef>.AllDefs.Where(x => x.plant != null && x.plant.Sowable).OrderBy(x => x.label))
             {
-                setting.graphEnable.Add(x.label, false);
+                setting.graphEnable.Add(CultureInfo.CurrentCulture.TextInfo.ToTitleCase(x.label.ToLower()), false);
             }
         }
+
         public void SetMarks(float x, string message, Color color)
         {
             if (!this.marks.Where(s => s.message == message).Any())
@@ -128,9 +133,18 @@ namespace FoodAnalyticsTab
             {
                 Find.WindowStack.Add(new Dialog_LineChartConfig(ref this.setting));
             }
+            UpdateSetting();
+        }
+        private void UpdateSetting()
+        {
+            curveDrawerStyle.DrawPoints = this.setting.DrawPoints;
+            curveDrawerStyle.UseAntiAliasedLines = this.setting.UseAntiAliasedLines;
+        }
+        public void UpdateData()
+        {
+
         }
 
-        
     }
 
 }

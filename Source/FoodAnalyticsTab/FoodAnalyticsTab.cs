@@ -65,9 +65,10 @@ namespace FoodAnalyticsTab
         private int daysUntilNextHarvestSeason; // to 10th of Spring, April 5th
         static float hayNut = 0, haygrass_yieldMax = 0, haygrass_yieldMin = 0;
 
-        List<LineChart> graphList = new List<LineChart>() {new LineChart(nextNDays) };
+        List<LineChart> chartList = new List<LineChart>() {new LineChart(nextNDays) };
 
         //List<ThingDef> plantDef = new List<ThingDef>();
+        private Predictor predictor = new Predictor();
 
         [Serializable]
         class DataPoint
@@ -409,29 +410,32 @@ namespace FoodAnalyticsTab
         private void DisplayGraphPage(Rect rect)
         {
             //marks add dots on top of a graph, the text label is the text in the popup box
-            graphList[0].SetMarks(this.daysUntilNextHarvestSeason, "Days until the Next Harvest Season", Color.green);
-            graphList[0].SetMarks(this.daysUntilGrowingPeriodOver, "Days until Growing Period is Over", Color.red);
-            graphList[0].SetMarks(this.daysUntilWinter, "Days until the Winter", Color.white);
-            graphList[0].SetMarks(this.daysUntilEndofWinter, "Days until the End of Winter", Color.yellow);
+            chartList[0].SetMarks(this.daysUntilNextHarvestSeason, "Days until the Next Harvest Season", Color.green);
+            chartList[0].SetMarks(this.daysUntilGrowingPeriodOver, "Days until Growing Period is Over", Color.red);
+            chartList[0].SetMarks(this.daysUntilWinter, "Days until the Winter", Color.white);
+            chartList[0].SetMarks(this.daysUntilEndofWinter, "Days until the End of Winter", Color.yellow);
 
             // plotting graphs   
-            graphList[0].SetCurve("Hay Yield(Max)", Color.green, projectedRecords.Select(y => y.hay_yield.max).ToList());
-            graphList[0].SetCurve("Hay Yield(Min)", Color.red, projectedRecords.Select(y => y.hay_yield.min).ToList());
-            graphList[0].SetCurve("Hay Stock(Max)", Color.white, projectedRecords.Select(y => y.hay_stock.max).ToList());
-            graphList[0].SetCurve("Hay Stock(Min)", Color.magenta, projectedRecords.Select(y => y.hay_stock.min).ToList());
-            graphList[0].SetCurve("Meat Stock", Color.blue, projectedRecords.Select(y => y.meat_stock.max).ToList());
+            chartList[0].SetCurve("Hay Yield(Max)", Color.green, projectedRecords.Select(y => y.hay_yield.max).ToList());
+            chartList[0].SetCurve("Hay Yield(Min)", Color.red, projectedRecords.Select(y => y.hay_yield.min).ToList());
+            chartList[0].SetCurve("Hay Stock(Max)", Color.white, projectedRecords.Select(y => y.hay_stock.max).ToList());
+            chartList[0].SetCurve("Hay Stock(Min)", Color.magenta, projectedRecords.Select(y => y.hay_stock.min).ToList());
+            chartList[0].SetCurve("Meat Stock", Color.blue, projectedRecords.Select(y => y.meat_stock.max).ToList());
             //graphList[0].SetCurve("Egg Stock", Color.yellow, projectedRecords.Select(y => y.meat_stock.max).ToList());
+            foreach (LineChart c in chartList) {
+                c.UpdateData();
+            }
 
             Widgets.BeginScrollView(rect, ref this.scrollPos[(int)FoodAnalyticsTab.Graph], 
-                new Rect(rect.x, rect.y, graphList[0].rect.width, graphList[0].rect.height * graphList.Count())); //TODO: figure out how to obtain viewRect
+                new Rect(rect.x, rect.y, chartList[0].rect.width, chartList[0].rect.height * chartList.Count())); //TODO: figure out how to obtain viewRect
             //nextNDays = (int) graphList[0].Draw(rect);
             Rect btn = new Rect(rect.xMin, rect.yMin, 110f, 40f);
             if (Widgets.ButtonText(btn, "New Chart", true, false, true))
             {
-                graphList.Add(new LineChart(graphList[0]));
+                chartList.Add(new LineChart(chartList[0]));
             }
             Rect newRect = new Rect(rect.xMin, btn.yMax, rect.width, rect.height);
-            foreach (LineChart g in graphList)
+            foreach (LineChart g in chartList)
             {
                 g.Draw(newRect);
                 if (g.remove == true)
@@ -443,7 +447,9 @@ namespace FoodAnalyticsTab
                     newRect = new Rect(g.rect.x, g.rect.yMax, rect.width, rect.height);
                 }
             }
-            graphList.RemoveAll(g => g.remove == true);
+            chartList.RemoveAll(g => g.remove == true);
+
+            predictor.EnablePrediction(chartList);
 
             Widgets.EndScrollView();
         }

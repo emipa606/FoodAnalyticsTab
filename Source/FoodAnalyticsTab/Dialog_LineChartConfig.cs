@@ -46,16 +46,56 @@ namespace FoodAnalyticsTab
             Text.Font = GameFont.Small;
             Rect listerRect = new Rect(0f, titleRect.yMax, 180f, inRect.height - titleRect.height);
             Listing_Standard listing_Standard = new Listing_Standard(listerRect);
-            if (this.setting.showDeficiency)
+            if (this.setting.ShowDeficiency)
             {
                 if (listing_Standard.ButtonText("Deficiency", null))
                 {
-                    this.setting.showDeficiency = false;
+                    this.setting.ShowDeficiency = false;
                 }
             }
             else if (listing_Standard.ButtonText("No Deficiency", null))
             {
-                this.setting.showDeficiency = true;
+                this.setting.ShowDeficiency = true;
+            }
+
+            if (this.setting.DrawPoints)
+            {
+                if (listing_Standard.ButtonText("Draw Points", null))
+                {
+                    this.setting.DrawPoints = false;
+                }
+            }
+            else if (listing_Standard.ButtonText("No Points", null))
+            {
+                this.setting.DrawPoints = true;
+            }
+
+            if (this.setting.UseAntiAliasedLines)
+            {
+                if (listing_Standard.ButtonText("Anti-Alias", null))
+                {
+                    this.setting.UseAntiAliasedLines = false;
+                }
+            }
+            else if (listing_Standard.ButtonText("No Anti-Alias", null))
+            {
+                this.setting.UseAntiAliasedLines = true;
+            }
+
+            // TODO: add floating menu here
+            if (this.setting.predictorModel == Predictor.ModelType.learning)
+            {
+                if (this.setting.EnableLearning)
+                {
+                    if (listing_Standard.ButtonText("Enable Learning", null))
+                    {
+                        this.setting.EnableLearning = false;
+                    }
+                }
+                else if (listing_Standard.ButtonText("No Learning", null))
+                {
+                    this.setting.EnableLearning = true;
+                }
             }
             /*
             if (listing_Standard.ButtonText(this.bill.repeatMode.GetLabel(), null))

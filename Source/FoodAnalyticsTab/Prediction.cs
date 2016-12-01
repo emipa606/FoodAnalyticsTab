@@ -4,6 +4,7 @@ using System.Linq;
 using Verse;
 using RimWorld;
 using UnityEngine;
+using System.Globalization;
 
 namespace FoodAnalyticsTab
 {
@@ -111,11 +112,16 @@ namespace FoodAnalyticsTab
        data selector checkbox
        add graph button
     */
-    class Prediction2
+    public class Predictor
     {
-        private class PlantGrowth
+        public enum ModelType
         {
-            public PlantGrowth(float a, float b)
+            analytical, iterative, learning
+        }
+
+        private class GrowthTracker
+        {
+            public GrowthTracker(float a, float b)
             {
                 Growth = a;
                 GrowthPerTick = b;
@@ -191,69 +197,39 @@ namespace FoodAnalyticsTab
             {
                 if (enabled)
                 {
-                    /*
-                    // crop
-                    if (GenDate.HourOfDay >= 4 && GenDate.HourOfDay <= 19)
-                    {
-                        if (allHaygrassGrowth.LastOrDefault().Growth >= 1.0f)
-                        {
-                            allHaygrassGrowth.LastOrDefault().Growth = Plant.BaseGrowthPercent;
-                            projectedRecords[0].hay_yield.max += haygrass_yieldMax;
-                            projectedRecords[0].hay_yield.min += haygrass_yieldMin;
-                        }
-                        projectedRecords[0].hay_stock.max += projectedRecords[0].hay_yield.max;
-                        projectedRecords[0].hay_stock.min += projectedRecords[0].hay_yield.min;
-                    }
-                    stock. -= GenDate.CurrentDayPercent * dailyHayConsumption; // only count the rest of day
-                    projectedRecords[0].hay_stock.min -= GenDate.CurrentDayPercent * dailyHayConsumption;
-                    projectedRecords[0].meat_stock.max -= GenDate.CurrentDayPercent * dailyKibbleConsumption * 2f / 5f; // convert every 50 kibbles to 20 meat
-                    projectedRecords[0].meat_stock.min -= GenDate.CurrentDayPercent * dailyKibbleConsumption * 2f / 5f;
-
-                    // calculate yields and stocks after today
-                    for (int day = 1; day < nextNDays; day++)
-                    {
-                        projectedRecords.Add(
-                            new Prediction(
-                                new Prediction.MinMax { min = 0, max = 0 },
-                                new Prediction.MinMax { max = projectedRecords[day - 1].hay_stock.max, min = projectedRecords[day - 1].hay_stock.min },
-                                new Prediction.MinMax { max = projectedRecords[day - 1].hay_consumption.max, min = projectedRecords[day - 1].hay_consumption.min },
-                                new Prediction.MinMax { max = projectedRecords[day - 1].meat_stock.max, min = projectedRecords[day - 1].meat_stock.min },
-                                new Prediction.MinMax { max = projectedRecords[day - 1].animal_population.max, min = projectedRecords[day - 1].animal_population.min }));
-
-                        foreach (PlantGrowth k in allHaygrassGrowth)
-                        {
-                            if (k.IsOutdoor && !(day <= daysUntilGrowingPeriodOver))
-                            {
-                                break;
-                            }
-                            k.Growth += k.GrowthPerTick * GenDate.TicksPerDay * 0.55f; // 0.55 is 55% of time plant spent growing
-                                                                                       //debug_val[6] = k.GrowthPerTick;
-                            if (k.Growth >= 1.0f)
-                            {
-                                projectedRecords[day].hay_yield.max += haygrass_yieldMax;
-                                projectedRecords[day].hay_yield.min += haygrass_yieldMin;
-                                k.Growth = Plant.BaseGrowthPercent; // if it's fully grown, replant and their growths start at 5%.
-                            }
-                        }
-
-                        projectedRecords[day].hay_stock.max += projectedRecords[day].hay_yield.max;
-                        projectedRecords[day].hay_stock.min += projectedRecords[day].hay_yield.min;
-                        projectedRecords[day].hay_stock.max -= dailyHayConsumption;
-                        projectedRecords[day].hay_stock.min -= dailyHayConsumption;
-                        projectedRecords[day].meat_stock.max -= dailyKibbleConsumption * 2f / 5f;
-                        projectedRecords[day].meat_stock.min -= dailyKibbleConsumption * 2f / 5f;
-                        */
-
                 }
             }
 
         };
         Dictionary<string, Prediction> all;
+
+        public Dictionary<String, bool> predictionEnable = new Dictionary<String, bool>();
+
+        public Predictor()
+        {
+            foreach (ThingDef x in DefDatabase<ThingDef>.AllDefs.Where(x => x.plant != null && x.plant.Sowable).OrderBy(x => x.label))
+            {
+                predictionEnable.Add(CultureInfo.CurrentCulture.TextInfo.ToTitleCase(x.label.ToLower()), false);
+            }
+        }
+
         void MakePrediction(int days)
         {
             foreach (var t in this.all)
             {
                 t.Value.update();
+            }
+        }
+
+        public void EnablePrediction(List<LineChart> chartList)
+        {
+            predictionEnable = predictionEnable.ToDictionary(p => p.Key, p => false);
+            foreach (LineChart c in chartList)
+            {
+                foreach (string s in c.setting.graphEnable.Where(x => x.Value == true).Select(x => x.Key).ToList())
+                {
+                    predictionEnable[s] = true;
+                }
             }
         }
     }
