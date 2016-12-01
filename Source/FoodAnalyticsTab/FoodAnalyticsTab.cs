@@ -65,9 +65,10 @@ namespace FoodAnalyticsTab
         private int daysUntilNextHarvestSeason; // to 10th of Spring, April 5th
         static float hayNut = 0, haygrass_yieldMax = 0, haygrass_yieldMin = 0;
 
-        List<LineGraph> graphList = new List<LineGraph>() {new LineGraph(nextNDays) };
+        List<LineChart> graphList = new List<LineChart>() {new LineChart(nextNDays) };
 
-        List<ThingDef> plantDef;
+        //List<ThingDef> plantDef = new List<ThingDef>();
+
         [Serializable]
         class DataPoint
         {
@@ -89,7 +90,8 @@ namespace FoodAnalyticsTab
                 (from d in DefDatabase<ThingDef>.AllDefs.Where(x => x.defName == "PlantHaygrass")
                  select d).FirstOrDefault().plant.harvestYield * 0.5f * 0.5f// 1st 0.5 is harvesting at 65% growth, 2nd 0.5 is lowest health.
                 );
-            plantDef = DefDatabase<ThingDef>.AllDefs.Where(x => x.plant != null && x.plant.Sowable).ToList();
+            //plantDef = DefDatabase<ThingDef>.AllDefs.Where(x => x.plant != null && x.plant.Sowable).ToList();
+
             dpList.Add(new DataPoint(GenDate.DateFullStringAt(GenTicks.TicksAbs)));
             //ML.WriteToXmlFile<List<DataPoint>>("C://datapoint.xml", dpList);
             //XmlSaver.SaveDataObject(dpList, "./datapoint.xml");
@@ -375,17 +377,21 @@ namespace FoodAnalyticsTab
                     i, (int)k.hay_yield.max, (int)k.hay_yield.min, (int)k.hay_stock.max, (int)k.hay_stock.min);
                 i++;
             }
+            
             foreach (var v in debug_val)
             {
                 analysis += v + ",";
             }
+            /*
             foreach (ThingDef x in plantDef)
             {
                 analysis += x.defName + ",";
             }
+            
             analysis += ",\n" + GenDate.CurrentMonth + "," + GenDate.CurrentSeason + "," +
                                         GenDate.DayOfMonth + "," + GenDate.DayOfYear + "," +
                                         GenTicks.TicksAbs + "," + Find.TickManager.TicksAbs + ",";
+            //*/
 
             // draw text
             Text.Anchor = TextAnchor.UpperLeft;
@@ -416,12 +422,12 @@ namespace FoodAnalyticsTab
                 new Rect(rect.x, rect.y, graphList[0].rect.width, graphList[0].rect.height * graphList.Count())); //TODO: figure out how to obtain viewRect
             //nextNDays = (int) graphList[0].Draw(rect);
             Rect btn = new Rect(rect.xMin, rect.yMin, 110f, 40f);
-            if (Widgets.ButtonText(btn, "Add Graph", true, false, true))
+            if (Widgets.ButtonText(btn, "New Chart", true, false, true))
             {
-                graphList.Add(new LineGraph(graphList[0]));
+                graphList.Add(new LineChart(graphList[0]));
             }
             Rect newRect = new Rect(rect.xMin, btn.yMax, rect.width, rect.height);
-            foreach (LineGraph g in graphList)
+            foreach (LineChart g in graphList)
             {
                 g.Draw(newRect);
                 if (g.remove == true)

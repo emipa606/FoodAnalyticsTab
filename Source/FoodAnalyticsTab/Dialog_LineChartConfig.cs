@@ -10,10 +10,10 @@ namespace FoodAnalyticsTab
 {
 
     [StaticConstructorOnStartup]
-    public class Dialog_GraphConfig : Window
+    public class Dialog_LineChartConfig : Window
     {
         private Vector2 scrollPosition = new Vector2();
-        private GraphSetting setting = new GraphSetting();
+        private ChartSettings setting;
         public override Vector2 InitialSize
         {
             get
@@ -22,7 +22,7 @@ namespace FoodAnalyticsTab
             }
         }
 
-        public Dialog_GraphConfig(GraphSetting setting) : base()
+        public Dialog_LineChartConfig(ref ChartSettings setting) : base()
         {
             this.setting = setting;
             this.forcePause = false;
@@ -36,7 +36,6 @@ namespace FoodAnalyticsTab
 
         public override void WindowUpdate()
         {
-            //this.bill.TryDrawIngredientSearchRadiusOnMap(this.billGiverPos);
         }
 
         public override void DoWindowContents(Rect inRect)
@@ -148,17 +147,31 @@ namespace FoodAnalyticsTab
             Rect rect2 = new Rect(centerRect.x + 1f, centerRect.y + 1f, num / 2f, 24f);
             if (Widgets.ButtonText(rect2, "ClearAll".Translate(), true, false, true))
             {
-                //filter.SetDisallowAll();
+                foreach (String s in setting.graphEnable.Keys.ToList())
+                {
+                    setting.graphEnable[s] = false;
+                }
             }
             Rect rect3 = new Rect(rect2.xMax + 1f, rect2.y, num / 2f, 24f);
             if (Widgets.ButtonText(rect3, "AllowAll".Translate(), true, false, true))
             {
-                //filter.SetAllowAll(parentFilter);
+                foreach (String s in setting.graphEnable.Keys.ToList())
+                {
+                    setting.graphEnable[s] = true;
+                }
             }
             Text.Font = GameFont.Small;
             centerRect.yMin = rect2.yMax;
-            Rect viewRect = new Rect(0f, 0f, centerRect.width - 16f, 2000);
+            Rect viewRect = new Rect(0, 0f, centerRect.width - 16f, DefDatabase<ThingDef>.AllDefs.Where(x => x.plant != null && x.plant.Sowable).Count()*20);
             Widgets.BeginScrollView(centerRect, ref scrollPosition, viewRect);
+            listing_Standard = new Listing_Standard(new Rect(6, 0, viewRect.width, viewRect.height));
+            foreach (String s in setting.graphEnable.Keys.ToList())
+            {
+                bool flag = setting.graphEnable[s];
+                listing_Standard.CheckboxLabeled(s, ref flag);
+                setting.graphEnable[s] = flag;
+            }
+            listing_Standard.End();
             Widgets.EndScrollView();
 
             //*/

@@ -21,11 +21,13 @@ namespace FoodAnalyticsTab
          are settings changed        
     */
 
-    public class GraphSetting
+    public class ChartSettings
     {
+        public Dictionary<String, bool> graphEnable = new Dictionary<String, bool>();
         public bool showDeficiency = false;
     }
-    class LineGraph
+
+    class LineChart
     {
         private List<CurveMark> marks = new List<CurveMark>();
         private Dictionary<String, SimpleCurveDrawInfo> curves = new Dictionary<String, SimpleCurveDrawInfo>();
@@ -37,16 +39,14 @@ namespace FoodAnalyticsTab
         public bool changed { get { return (int)scrollPos_curr != (int)scrollPos_prev; } }
         static int min_day = 1, max_day = 60;
         public bool remove = false;
+        private ChartSettings setting = new ChartSettings();
 
-
-        public GraphSetting setting = new GraphSetting();
-
-        public LineGraph(float default_day)
+        public LineChart(float default_day)
         {
             this.scrollPos_curr = this.scrollPos_prev = default_day;
             SetDefaultStyle();
         }
-        public LineGraph(LineGraph lg)
+        public LineChart(LineChart lg)
         {
             this.scrollPos_curr = this.scrollPos_prev = lg.scrollPos_curr;
             SetDefaultStyle();
@@ -69,6 +69,11 @@ namespace FoodAnalyticsTab
             curveDrawerStyle.DrawLegend = true; //
             curveDrawerStyle.DrawCurveMousePoint = true; // hover over graph shows details
             curveDrawerStyle.UseAntiAliasedLines = true; // smooth lines
+
+            foreach (ThingDef x in DefDatabase<ThingDef>.AllDefs.Where(x => x.plant != null && x.plant.Sowable))
+            {
+                setting.graphEnable.Add(x.label, false);
+            }
         }
         public void SetMarks(float x, string message, Color color)
         {
@@ -119,9 +124,9 @@ namespace FoodAnalyticsTab
             {
                 this.remove = true;
             }
-            if (Widgets.ButtonText(new Rect(deleteBtn.x, deleteBtn.yMax, deleteBtn.width, deleteBtn.height),"Detail", true, true, true))
+            if (Widgets.ButtonText(new Rect(deleteBtn.x, deleteBtn.yMax, deleteBtn.width, deleteBtn.height),"Setting", true, true, true))
             {
-                Find.WindowStack.Add(new Dialog_GraphConfig(this.setting));
+                Find.WindowStack.Add(new Dialog_LineChartConfig(ref this.setting));
             }
         }
 
