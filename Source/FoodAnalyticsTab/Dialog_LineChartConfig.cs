@@ -46,6 +46,12 @@ namespace FoodAnalyticsTab
             Text.Font = GameFont.Small;
             Rect listerRect = new Rect(0f, titleRect.yMax, 180f, inRect.height - titleRect.height);
             Listing_Standard listing_Standard = new Listing_Standard(listerRect);
+
+            if (listing_Standard.ButtonText("Default", null))
+            {
+                this.setting.SetDefault();
+            }
+
             if (this.setting.ShowDeficiency)
             {
                 if (listing_Standard.ButtonText("Deficiency", null))

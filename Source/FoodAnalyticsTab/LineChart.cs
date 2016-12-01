@@ -24,11 +24,22 @@ namespace FoodAnalyticsTab
     public class ChartSettings
     {
         public Dictionary<String, bool> graphEnable = new Dictionary<String, bool>();
-        public bool ShowDeficiency = false;
-        public bool DrawPoints = false;
-        public bool UseAntiAliasedLines = false;
+        public bool ShowDeficiency, DrawPoints, UseAntiAliasedLines, EnableLearning;
         public Predictor.ModelType predictorModel = Predictor.ModelType.iterative;
-        public bool EnableLearning = false;
+
+        public ChartSettings()
+        {
+            //SetDefault();
+        }
+        public void SetDefault()
+        {
+            graphEnable = graphEnable.ToDictionary(p => p.Key, p => false); 
+            ShowDeficiency = false;
+            DrawPoints = false;
+            UseAntiAliasedLines = true;
+            predictorModel = Predictor.ModelType.iterative;
+            EnableLearning = false;
+        }
     }
 
     public class LineChart
@@ -140,9 +151,14 @@ namespace FoodAnalyticsTab
             curveDrawerStyle.DrawPoints = this.setting.DrawPoints;
             curveDrawerStyle.UseAntiAliasedLines = this.setting.UseAntiAliasedLines;
         }
-        public void UpdateData()
+        public void UpdateData(ref Predictor predictor)
         {
-
+            //foreach (Predictor.PredType t in predictor.allPredType.Values.Where(p => p.enabled == true))
+            foreach (String s in this.setting.graphEnable.Where(x => x.Value == true).Select(x => x.Key))
+            {
+                this.SetCurve(s + "Yield(Max)", Color.green, predictor.allPredType[s].projectedPred.Select(x => x.yield.max).ToList());
+                this.SetCurve(s + "Yield(Min)", Color.red, predictor.allPredType[s].projectedPred.Select(x => x.yield.min).ToList());
+            }
         }
 
     }

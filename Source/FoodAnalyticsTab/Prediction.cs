@@ -107,10 +107,11 @@ namespace FoodAnalyticsTab
                                           ^
                                           |_butchering
 
-    */
-    /*
-       data selector checkbox
-       add graph button
+        data structure:
+        Predictor contain all prediction items, eg, prediction for hay, population
+        Prediction item include prediction terms, eg, stock, yield, consumption
+        Q.what should contain the 60-day prediction? Prediction obj or PredTerm?
+        I think PredTerm is for daily prediction result
     */
     public class Predictor
     {
@@ -118,6 +119,14 @@ namespace FoodAnalyticsTab
         {
             analytical, iterative, learning
         }
+
+        // important dates
+        public static int daysUntilWinter, // to Dec 1st
+                          daysUntilEndofWinter, // to February 5th
+                          daysUntilGrowingPeriodOver, // to 10th of Fall, Oct 5th
+                          daysUntilNextHarvestSeason, // to 10th of Spring, April 5th
+                          numTicksBeforeResting = 0,
+                          nextNDays = 60;
 
         private class GrowthTracker
         {
@@ -130,12 +139,17 @@ namespace FoodAnalyticsTab
             public float GrowthPerTick { get; set; }
             public bool IsOutdoor { get; set; }
         };
-        private class Prediction // should contain update rule
+        public class PredType // should contain update rule
         {
+            public ThingDef def;
+            public bool enabled { get; set; }
+            private List<GrowthTracker> allGrowth = new List<GrowthTracker>();
+            public List<DayPred> projectedPred = new List<DayPred>(1);
+
             public class MinMax
             {
                 public bool showDeficiency { get; set; } = false;
-                private float _min, _max;
+                private float _min = 0, _max = 0;
                 public float min
                 {
                     get { return _min; }
@@ -161,18 +175,28 @@ namespace FoodAnalyticsTab
                     }
                 }
 
-            }
-            public class PredTerm
-            {
-                public MinMax yield, consumption, stock;
-                public bool enabled;
-                public void SetUpdateRule(float v0, float v)
+                public MinMax()
                 {
 
                 }
-                public void UpdateOnce()
+                public MinMax(float max, float min)
                 {
+                    _max = max;
+                    _min = min;
+                }
+                public static implicit operator MinMax(float val)
+                {
+                    return new MinMax(val, val);
+                }
+            }
+            public class DayPred
+            {
+                public int day = 0;
+                public MinMax yield = new MinMax(), consumption = new MinMax(), stock = new MinMax();
 
+                public DayPred(int day)
+                {
+                    this.day = day;
                 }
             }
             private bool _showDeficiency;
@@ -181,43 +205,147 @@ namespace FoodAnalyticsTab
                 get { return _showDeficiency; }
                 set
                 {
-                    //_showDeficiency = hay_yield.showDeficiency = hay_stock.showDeficiency = meat_stock.showDeficiency =
-                    //   animal_population.showDeficiency = hay_consumption.showDeficiency = value;
+                    _showDeficiency = value;
                 }
             }
-            public bool enabled { get; set; }
+            
 
-            public Prediction(MinMax a, MinMax b, MinMax c, MinMax d, MinMax e)
+            public PredType(ThingDef def)
             {
                 showDeficiency = false;
+                enabled = false;
+                this.def = def;
             }
-            public List<PredTerm> PredTerms { get; set; }
+
+            public void SetUpdateRule(float v0, float v)
+            {
+
+            }
+            public void GetCurrentStat()
+            {
+                foreach (Thing h in Find.ListerThings.AllThings.Where(x => x.def.label == this.def.label)) // add current growth data
+                {
+                    allGrowth.Add(new GrowthTracker(((Plant)h).Growth,
+                        ((Plant)h).GrowthRate / (GenDate.TicksPerDay * h.def.plant.growDays)));
+                    allGrowth.Last().IsOutdoor = h.Position.GetRoomOrAdjacent().UsesOutdoorTemperature;
+                }
+                projectedPred[0].stock = Find.ListerThings.AllThings.Where(x => x.def.label == this.def.plant.harvestedThingDef.label).Sum(x => x.stackCount);
+            }
 
             public void update()
             {
                 if (enabled)
                 {
+                    //*
+                    // calculate yield for today                   
+                    foreach (GrowthTracker g in allGrowth)
+                    {
+                        g.Growth += Predictor.numTicksBeforeResting * g.GrowthPerTick;
+
+                        if (g.Growth >= 1.0f)
+                        {
+                            g.Growth = Plant.BaseGrowthPercent;
+                            projectedPred[0].yield.max = this.def.plant.harvestYield;
+                            projectedPred[0].yield.min = this.def.plant.harvestYield * 0.5f * .5f;
+                        }
+                    }
+                    /*
+                    if (Predictor.daysUntilGrowingPeriodOver > 0)
+                    {
+                        dailyHayConsumption = dailyKibbleConsumption * 2f / 5f + dailyHayConsumptionIndoorAnimals;
+                    }
+                    else
+                    {
+                        dailyHayConsumption = dailyKibbleConsumption * 2f / 5f + dailyHayConsumptionRoughAnimals;
+                    }
+                    */
+
+                    projectedPred[0].stock.max += projectedPred[0].yield.max;
+                    projectedPred[0].stock.min += projectedPred[0].yield.min;
+
+                    /*
+                    projectedRecords[0].hay_stock.max -= (1 - GenDate.CurrentDayPercent) * dailyHayConsumption; // only count the rest of day
+                    projectedRecords[0].hay_stock.min -= (1 - GenDate.CurrentDayPercent) * dailyHayConsumption;
+                    projectedRecords[0].meat_stock.max -= (1 - GenDate.CurrentDayPercent) * dailyKibbleConsumption * 2f / 5f; // convert every 50 kibbles to 20 meat
+                    projectedRecords[0].meat_stock.min -= (1 - GenDate.CurrentDayPercent) * dailyKibbleConsumption * 2f / 5f;
+                    */
+
+                    // calculate yields and stocks after today
+                    for (int day = 1; day < nextNDays; day++)
+                    {
+                        projectedPred.Add(new DayPred(day));
+
+                        foreach (GrowthTracker g in allGrowth)
+                        {
+                            if (g.IsOutdoor && !(day <= Predictor.daysUntilGrowingPeriodOver))
+                            {
+                                continue; // don't count outdoor crop if it's growing period is over
+                            }
+                            g.Growth += g.GrowthPerTick * GenDate.TicksPerDay * 0.55f; // 0.55 is 55% of time plant spent growing
+
+                            if (g.Growth >= 1.0f)
+                            {
+                                projectedPred[day].yield.max += this.def.plant.harvestYield;
+                                projectedPred[day].yield.min += this.def.plant.harvestYield * 0.5f * 0.5f;
+                                g.Growth = Plant.BaseGrowthPercent; // if it's fully grown, replant and their growths start at 5%.
+                            }
+                        }
+                        /*
+                        if (day <= daysUntilGrowingPeriodOver)
+                        {
+                            dailyHayConsumption = dailyKibbleConsumption * 2f / 5f + dailyHayConsumptionIndoorAnimals;
+                        }
+                        else
+                        {
+                            dailyHayConsumption = dailyKibbleConsumption * 2f / 5f + dailyHayConsumptionRoughAnimals;
+                        }
+                        projectedRecords[day].hay_stock.max += projectedRecords[day].hay_yield.max - dailyHayConsumption;
+                        projectedRecords[day].hay_stock.min += projectedRecords[day].hay_yield.min - dailyHayConsumption;
+
+                        projectedRecords[day].meat_stock.max -= dailyKibbleConsumption * 2f / 5f;
+                        projectedRecords[day].meat_stock.min -= dailyKibbleConsumption * 2f / 5f;
+                        */
+                    }
+                    //*/
                 }
             }
 
         };
-        Dictionary<string, Prediction> all;
+        public Dictionary<string, PredType> allPredType = new Dictionary<string, PredType>();
 
         public Dictionary<String, bool> predictionEnable = new Dictionary<String, bool>();
+        private List<ThingDef> plantDefs = new List<ThingDef>();
 
         public Predictor()
         {
-            foreach (ThingDef x in DefDatabase<ThingDef>.AllDefs.Where(x => x.plant != null && x.plant.Sowable).OrderBy(x => x.label))
+            plantDefs = DefDatabase<ThingDef>.AllDefs.Where(x => x.plant != null && x.plant.Sowable).ToList();
+            foreach (ThingDef x in plantDefs.OrderBy(x => x.label))
             {
                 predictionEnable.Add(CultureInfo.CurrentCulture.TextInfo.ToTitleCase(x.label.ToLower()), false);
+                allPredType.Add(CultureInfo.CurrentCulture.TextInfo.ToTitleCase(x.label.ToLower()), new PredType(x));
             }
         }
 
         void MakePrediction(int days)
         {
-            foreach (var t in this.all)
+            // exclude resting plants' growth
+            if (GenDate.CurrentDayPercent < 0.25f) // if resting before 6am
             {
-                t.Value.update();
+                numTicksBeforeResting = (int) (GenDate.TicksPerDay * 0.55f); // will grow the full day
+            }
+            else if (GenDate.CurrentDayPercent > 0.8f) // if resting after 7.2pm
+            {
+                numTicksBeforeResting = 0; // won't grow anymore
+            }
+            else // from .25 to .8 
+            {
+                numTicksBeforeResting = (int) (GenDate.TicksPerDay * (0.8f - GenDate.CurrentDayPercent));
+            }
+
+            foreach (String s in this.allPredType.Keys)
+            {
+                if (predictionEnable[s])
+                    allPredType[s].update();
             }
         }
 
@@ -229,7 +357,42 @@ namespace FoodAnalyticsTab
                 foreach (string s in c.setting.graphEnable.Where(x => x.Value == true).Select(x => x.Key).ToList())
                 {
                     predictionEnable[s] = true;
+                    allPredType[s].enabled = true;
                 }
+            }
+        }
+
+        // calculating number of days until certain dates
+        private void UpdateDates()
+        {
+
+            Predictor.daysUntilWinter = ((Month.Dec - GenDate.CurrentMonth - 1) * GenDate.DaysPerMonth + (GenDate.DaysPerMonth - GenDate.DayOfMonth)); // to Dec 1st
+
+            if (GenDate.CurrentMonth > Month.Feb)
+            {
+                Predictor.daysUntilEndofWinter = ((13 - (int)GenDate.CurrentMonth) * GenDate.DaysPerMonth + (GenDate.DaysPerMonth - GenDate.DayOfMonth));
+            }
+            else
+            {
+                Predictor.daysUntilEndofWinter = ((Month.Feb - GenDate.CurrentMonth) * GenDate.DaysPerMonth + (GenDate.DaysPerMonth - GenDate.DayOfMonth));
+            }
+
+            if (GenDate.CurrentMonth >= Month.Mar && GenDate.CurrentMonth < Month.Nov)
+            {
+                Predictor.daysUntilGrowingPeriodOver = ((Month.Oct - GenDate.CurrentMonth) * GenDate.DaysPerMonth + (GenDate.DaysPerMonth - GenDate.DayOfMonth));
+            }
+            else
+            {
+                Predictor.daysUntilGrowingPeriodOver = 0;
+            }
+
+            if (GenDate.CurrentMonth > Month.Apr && GenDate.CurrentMonth <= Month.Dec)
+            {
+                Predictor.daysUntilNextHarvestSeason = ((15 - (int)GenDate.CurrentMonth) * GenDate.DaysPerMonth + (GenDate.DaysPerMonth - GenDate.DayOfMonth));
+            }
+            else
+            {
+                Predictor.daysUntilNextHarvestSeason = ((Month.Apr - GenDate.CurrentMonth) * GenDate.DaysPerMonth + (GenDate.DaysPerMonth - GenDate.DayOfMonth));
             }
         }
     }

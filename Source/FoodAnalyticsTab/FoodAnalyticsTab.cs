@@ -414,16 +414,17 @@ namespace FoodAnalyticsTab
             chartList[0].SetMarks(this.daysUntilGrowingPeriodOver, "Days until Growing Period is Over", Color.red);
             chartList[0].SetMarks(this.daysUntilWinter, "Days until the Winter", Color.white);
             chartList[0].SetMarks(this.daysUntilEndofWinter, "Days until the End of Winter", Color.yellow);
-
+            
             // plotting graphs   
             chartList[0].SetCurve("Hay Yield(Max)", Color.green, projectedRecords.Select(y => y.hay_yield.max).ToList());
             chartList[0].SetCurve("Hay Yield(Min)", Color.red, projectedRecords.Select(y => y.hay_yield.min).ToList());
             chartList[0].SetCurve("Hay Stock(Max)", Color.white, projectedRecords.Select(y => y.hay_stock.max).ToList());
             chartList[0].SetCurve("Hay Stock(Min)", Color.magenta, projectedRecords.Select(y => y.hay_stock.min).ToList());
             chartList[0].SetCurve("Meat Stock", Color.blue, projectedRecords.Select(y => y.meat_stock.max).ToList());
-            //graphList[0].SetCurve("Egg Stock", Color.yellow, projectedRecords.Select(y => y.meat_stock.max).ToList());
+            
+
             foreach (LineChart c in chartList) {
-                c.UpdateData();
+                c.UpdateData(ref predictor);
             }
 
             Widgets.BeginScrollView(rect, ref this.scrollPos[(int)FoodAnalyticsTab.Graph], 
@@ -432,7 +433,8 @@ namespace FoodAnalyticsTab
             Rect btn = new Rect(rect.xMin, rect.yMin, 110f, 40f);
             if (Widgets.ButtonText(btn, "New Chart", true, false, true))
             {
-                chartList.Add(new LineChart(chartList[0]));
+                //chartList.Add(new LineChart(chartList[0]));
+                chartList.Add(new LineChart(60));
             }
             Rect newRect = new Rect(rect.xMin, btn.yMax, rect.width, rect.height);
             foreach (LineChart g in chartList)
