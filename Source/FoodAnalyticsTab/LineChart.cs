@@ -54,7 +54,7 @@ namespace FoodAnalyticsTab
         private float scrollPos_curr;
         private float scrollPos_prev;
         public Rect rect { get; private set; } // region defines this LineGraph
-        public bool changed { get { return (int)scrollPos_curr != (int)scrollPos_prev; } }
+        public bool changed = false;
         static int min_day = 1, max_day = 60;
         public bool remove = false;
         public ChartSettings setting = new ChartSettings();
@@ -110,6 +110,8 @@ namespace FoodAnalyticsTab
         }
         public void SetCurve(String label, Color color, List<float> points)
         {
+            //TODO: fix labels of legends issue of fixed text width
+            //TODO: expand rect of legend accordingly
             if (!this.curves.ContainsKey(label))
             {
                 this.curves.Add(label, new SimpleCurveDrawInfo());

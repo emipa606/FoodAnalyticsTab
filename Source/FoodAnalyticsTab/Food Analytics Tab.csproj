@@ -51,7 +51,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Dialog_LineChartConfig.cs" />
-    <Compile Include="FoodAnalyticsTab.cs" />
+    <Compile Include="MainTabWindow_Estimator.cs" />
     <Compile Include="LineChart.cs" />
     <Compile Include="ML.cs" />
     <Compile Include="Prediction.cs" />

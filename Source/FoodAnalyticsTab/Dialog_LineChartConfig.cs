@@ -199,7 +199,14 @@ namespace FoodAnalyticsTab
             {
                 bool flag = setting.graphEnable[s];
                 listing_Standard.CheckboxLabeled(s, ref flag);
-                setting.graphEnable[s] = flag;
+                if (flag != setting.graphEnable[s])
+                {
+                    setting.graphEnable[s] = flag;
+                    MainTabWindow_Estimator.predictor.predictionEnable[s] = flag;
+                    MainTabWindow_Estimator.predictor.allPredType[s].enabled = flag;
+  
+                    MainTabWindow_Estimator.predictor.MakePrediction(0);
+                }
             }
             listing_Standard.End();
             Widgets.EndScrollView();

@@ -40,28 +40,12 @@ namespace FoodAnalyticsTab
         private float dailyHayConsumptionIndoorAnimals, dailyKibbleConsumption, dailyHayConsumption, dailyHayConsumptionRoughAnimals;
         private int numAnimals, numRoughAnimals, numKibbleAnimals, numHaygrass, numHay, numMeat, numEgg, numHen, numColonist, numHerbivoreIndoor, numHerbivoreOutdoor;
         
-
         private static int nextNDays = 60; // default display 25 days
-
-        List<Prediction> projectedRecords = new List<Prediction>(); 
-        private class PlantGrowth
-        {
-            public PlantGrowth(float a, float b)
-            {
-                Growth = a;
-                GrowthPerTick = b;
-            }
-            public float Growth { get; set; }
-            public float GrowthPerTick { get; set; }
-            public bool IsOutdoor { get; set; }
-        };
-        List<PlantGrowth> allHaygrassGrowth = new List<PlantGrowth>();
-
+        
         public static float[] debug_val = new float[10];
 
-        static float hayNut = 0, haygrass_yieldMax = 0, haygrass_yieldMin = 0;
-
-        private Predictor predictor = new Predictor();
+    
+        public static Predictor predictor = new Predictor();
         List<LineChart> chartList = new List<LineChart>();
 
         //List<ThingDef> plantDef = new List<ThingDef>();
@@ -83,17 +67,8 @@ namespace FoodAnalyticsTab
             this.doCloseX = true;
             this.doCloseButton = false;
             this.closeOnClickedOutside = false;
-            this.forcePause = true;
-
-            MainTabWindow_Estimator.hayNut = (from d in DefDatabase<ThingDef>.AllDefs.Where(x => x.defName == "Hay")
-                                   select d).FirstOrDefault().ingestible.nutrition;
-            MainTabWindow_Estimator.haygrass_yieldMax = GenMath.RoundRandom(
-                (from d in DefDatabase<ThingDef>.AllDefs.Where(x => x.defName == "PlantHaygrass")
-                 select d).FirstOrDefault().plant.harvestYield);
-            MainTabWindow_Estimator.haygrass_yieldMin = GenMath.RoundRandom(
-                (from d in DefDatabase<ThingDef>.AllDefs.Where(x => x.defName == "PlantHaygrass")
-                 select d).FirstOrDefault().plant.harvestYield * 0.5f * 0.5f// 1st 0.5 is harvesting at 65% growth, 2nd 0.5 is lowest health.
-                );
+            this.forcePause = false;
+           
 
             predictor.predictionEnable["Haygrass"] = true;
             chartList.Add( new LineChart(nextNDays, ref predictor.predictionEnable));
@@ -142,6 +117,7 @@ namespace FoodAnalyticsTab
                 Where(x => x.def.defName == "Chicken" && x.gender == Gender.Female &&
                       x.ageTracker.CurLifeStage.defName == "AnimalAdult").Count(); // x.def.defName == "Chicken" worked, but x.Label == "chicken" didn't work
 
+            float hayNut = 1f;
             dailyHayConsumptionIndoorAnimals = roughAnimals.Where(a => a.Position.GetRoomOrAdjacent().UsesOutdoorTemperature)
                            .Sum(x => x.needs.food.FoodFallPerTick) * GenDate.TicksPerDay / hayNut;
             dailyHayConsumptionRoughAnimals = roughAnimals.Sum(x => x.needs.food.FoodFallPerTick) * GenDate.TicksPerDay / hayNut;
@@ -155,16 +131,7 @@ namespace FoodAnalyticsTab
 
             numHaygrass = allHaygrass.Count();
             numHay = Find.ListerThings.AllThings.Where(x => x.def.label == "hay").Sum(x => x.stackCount);
-
-            allHaygrassGrowth.Clear();
             
-            foreach (var h in allHaygrass) // add current growth data
-            {
-                allHaygrassGrowth.Add(new PlantGrowth(
-                    ((Plant)h).Growth,
-                    ((Plant)h).GrowthRate / (GenDate.TicksPerDay * h.def.plant.growDays)));
-                allHaygrassGrowth.Last().IsOutdoor = h.Position.GetRoomOrAdjacent().UsesOutdoorTemperature;
-            }
             // TODO: Find.ZoneManager.AllZones, potentially look at unplannted cells in growing zones and predict work amount and complete time.
             // look at Zone_Growing class , ZoneManager class
         }
@@ -238,17 +205,19 @@ namespace FoodAnalyticsTab
                             "\nEstimated number of hay needed yearly for hay-eaters only = " + (int)(dailyHayConsumptionIndoorAnimals * GenDate.DaysPerMonth * GenDate.MonthsPerYear) + // 60 days
                             "\nEstimated number of hay needed yearly for all animals = " + (int)(dailyHayConsumption * GenDate.DaysPerMonth * GenDate.MonthsPerYear) + // 60 days
                             "\nEstimated number of hay needed until next harvest season(10th of Spring) for all animals = " + (int)(dailyHayConsumption * Predictor.daysUntilNextHarvestSeason) +
-                            "\nNumber of haygrass plant = " + (int)numHaygrass + ", outdoor = " + allHaygrassGrowth.Where(h => h.IsOutdoor).Count() +
+                            "\nNumber of haygrass plant = " + (int)numHaygrass + ", outdoor = " +// allHaygrassGrowth.Where(h => h.IsOutdoor).Count() +
                             "\nNumber of haygrass needed = " + dailyHayConsumption / 20 * 10 +
                             "\nEstimate of projected harvest production:\n";
             analysis += "Day\t Max Yield Min Yield Max Stock Min Stock\n";
             int i = 0;
+            /*
             foreach (Prediction k in projectedRecords)
             {
                 analysis += String.Format("{0,-2}\t {1,-6}\t {2,-6}\t {3,-6}\t {4,-6}\n",
                     i, (int)k.hay_yield.max, (int)k.hay_yield.min, (int)k.hay_stock.max, (int)k.hay_stock.min);
                 i++;
             }
+            */
             
             foreach (var v in debug_val)
             {
@@ -283,21 +252,19 @@ namespace FoodAnalyticsTab
             Rect btn = new Rect(rect.xMin, rect.yMin, 110f, 40f);
             if (Widgets.ButtonText(btn, "New Chart", true, false, true))
             {
-                //chartList.Add(new LineChart(chartList[0]));
                 chartList.Add(new LineChart(60, ref predictor.predictionEnable));
             }
 
             
             if (!chartList.NullOrEmpty())
             {
+                // update curves in each chart
                 foreach (LineChart c in chartList)
                 {
-                    if (Find.TickManager.Paused)
-                    {
-                        predictor.MakePrediction(0);
-                    }
                     c.UpdateData(ref predictor);
                 }
+
+                // start drawing all charts
                 rect.yMin = btn.yMax;
                 Widgets.BeginScrollView(rect, ref this.scrollPos[(int)FoodAnalyticsTab.Graph],
                     new Rect(rect.x, rect.yMin, chartList[0].rect.width, chartList[0].rect.height * chartList.Count())); //TODO: figure out how to obtain viewRect
@@ -305,7 +272,7 @@ namespace FoodAnalyticsTab
                 Rect newRect = new Rect(rect.xMin, btn.yMax, rect.width, rect.height);
                 foreach (LineChart g in chartList)
                 {
-                    g.Draw(newRect);
+                    g.Draw(newRect); 
                     if (g.remove == true)
                     {
                         newRect = new Rect(g.rect.x, g.rect.yMin, rect.width, rect.height);
@@ -318,7 +285,6 @@ namespace FoodAnalyticsTab
                 chartList.RemoveAll(g => g.remove == true);
 
                 predictor.EnablePrediction(chartList);
-
 
                 Widgets.EndScrollView();
             }
