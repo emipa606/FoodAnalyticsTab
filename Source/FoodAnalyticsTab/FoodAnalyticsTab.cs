@@ -58,11 +58,7 @@ namespace FoodAnalyticsTab
         List<PlantGrowth> allHaygrassGrowth = new List<PlantGrowth>();
 
         public static float[] debug_val = new float[10];
-        // important dates
-        private int daysUntilWinter;// to Dec 1st
-        private int daysUntilEndofWinter; // to February 5th
-        private int daysUntilGrowingPeriodOver; // to 10th of Fall, Oct 5th
-        private int daysUntilNextHarvestSeason; // to 10th of Spring, April 5th
+
         static float hayNut = 0, haygrass_yieldMax = 0, haygrass_yieldMin = 0;
 
         private Predictor predictor = new Predictor();
@@ -86,7 +82,9 @@ namespace FoodAnalyticsTab
 
             this.doCloseX = true;
             this.doCloseButton = false;
-            this.closeOnClickedOutside = true;
+            this.closeOnClickedOutside = false;
+            this.forcePause = true;
+
             MainTabWindow_Estimator.hayNut = (from d in DefDatabase<ThingDef>.AllDefs.Where(x => x.defName == "Hay")
                                    select d).FirstOrDefault().ingestible.nutrition;
             MainTabWindow_Estimator.haygrass_yieldMax = GenMath.RoundRandom(
@@ -117,7 +115,7 @@ namespace FoodAnalyticsTab
             base.PreOpen();
             if (Find.TickManager.Paused)
             {
-                UpdateCalculations();
+                predictor.MakePrediction(0);
             }
 
             //dpList.Add(new DataPoint(GenDate.DateFullStringAt(GenTicks.TicksAbs)));
@@ -170,141 +168,7 @@ namespace FoodAnalyticsTab
             // TODO: Find.ZoneManager.AllZones, potentially look at unplannted cells in growing zones and predict work amount and complete time.
             // look at Zone_Growing class , ZoneManager class
         }
-
-        private void MakePrediction()
-        {
-            // calculate yield for today
-            projectedRecords.Clear();
-            projectedRecords.Add(
-                new Prediction(
-                    new Prediction.MinMax { min = 0, max = 0 }, 
-                    new Prediction.MinMax { min = numHay, max = numHay },
-                    new Prediction.MinMax { min = dailyHayConsumption , max = dailyHayConsumption },
-                    new Prediction.MinMax { min = numMeat, max = numMeat },
-                    new Prediction.MinMax { min = numAnimals, max = numAnimals }));
-
-            float numTicksBeforeResting = 0;
-            // exclude resting plants' growth
-            if (GenDate.CurrentDayPercent < 0.25f) // if resting before 6am
-            {
-                numTicksBeforeResting = (float)GenDate.TicksPerDay * 0.55f; // will grow the full day
-            } else if (GenDate.CurrentDayPercent > 0.8f) // if resting after 7.2pm
-            {
-                numTicksBeforeResting = 0; // won't grow anymore
-            } else // from .25 to .8 
-            {
-                numTicksBeforeResting = GenDate.TicksPerDay * (0.8f - GenDate.CurrentDayPercent);
-            }
-            foreach (PlantGrowth g in allHaygrassGrowth)
-            {
-                g.Growth += numTicksBeforeResting * g.GrowthPerTick;
-
-                if (g.Growth >= 1.0f)
-                {
-                    g.Growth = Plant.BaseGrowthPercent;
-                    projectedRecords[0].hay_yield.max += haygrass_yieldMax;
-                    projectedRecords[0].hay_yield.min += haygrass_yieldMin;
-                }
-            }
-            if (daysUntilGrowingPeriodOver > 0)
-            {
-                dailyHayConsumption = dailyKibbleConsumption * 2f / 5f + dailyHayConsumptionIndoorAnimals;
-            } else
-            {
-                dailyHayConsumption = dailyKibbleConsumption * 2f / 5f + dailyHayConsumptionRoughAnimals;
-            }
-
-            projectedRecords[0].hay_stock.max += projectedRecords[0].hay_yield.max;
-            projectedRecords[0].hay_stock.min += projectedRecords[0].hay_yield.min;
-
-
-            projectedRecords[0].hay_stock.max -= (1 - GenDate.CurrentDayPercent) * dailyHayConsumption; // only count the rest of day
-            projectedRecords[0].hay_stock.min -= (1 - GenDate.CurrentDayPercent) * dailyHayConsumption;
-            projectedRecords[0].meat_stock.max -= (1 - GenDate.CurrentDayPercent) * dailyKibbleConsumption * 2f / 5f; // convert every 50 kibbles to 20 meat
-            projectedRecords[0].meat_stock.min -= (1 - GenDate.CurrentDayPercent) * dailyKibbleConsumption * 2f / 5f;
-
-            // calculate yields and stocks after today
-            for (int day = 1; day < nextNDays; day++)
-            {
-                projectedRecords.Add(
-                    new Prediction(
-                        new Prediction.MinMax { min = 0, max = 0 },
-                        new Prediction.MinMax { max = projectedRecords[day - 1].hay_stock.max, min = projectedRecords[day - 1].hay_stock.min },
-                        new Prediction.MinMax { max = projectedRecords[day - 1].hay_consumption.max, min = projectedRecords[day - 1].hay_consumption.min },
-                        new Prediction.MinMax { max = projectedRecords[day - 1].meat_stock.max, min = projectedRecords[day - 1].meat_stock.min },
-                        new Prediction.MinMax { max = projectedRecords[day - 1].animal_population.max, min = projectedRecords[day - 1].animal_population.min }));
-
-                foreach (PlantGrowth k in allHaygrassGrowth)
-                {
-                    if (k.IsOutdoor && !(day <= daysUntilGrowingPeriodOver))
-                    {
-                        continue; // don't count outdoor crop if it's growing period is over
-                    }
-                    k.Growth += k.GrowthPerTick * GenDate.TicksPerDay * 0.55f; // 0.55 is 55% of time plant spent growing
-                    
-                    if (k.Growth >= 1.0f)
-                    {
-                        projectedRecords[day].hay_yield.max += haygrass_yieldMax;
-                        projectedRecords[day].hay_yield.min += haygrass_yieldMin;
-                        k.Growth = Plant.BaseGrowthPercent; // if it's fully grown, replant and their growths start at 5%.
-                    }
-                }
-                if (day <= daysUntilGrowingPeriodOver)
-                {
-                    dailyHayConsumption = dailyKibbleConsumption * 2f / 5f + dailyHayConsumptionIndoorAnimals;
-                }
-                else
-                {
-                    dailyHayConsumption = dailyKibbleConsumption * 2f / 5f + dailyHayConsumptionRoughAnimals;
-                }
-                projectedRecords[day].hay_stock.max += projectedRecords[day].hay_yield.max - dailyHayConsumption;
-                projectedRecords[day].hay_stock.min += projectedRecords[day].hay_yield.min - dailyHayConsumption;
-
-                projectedRecords[day].meat_stock.max -= dailyKibbleConsumption * 2f / 5f;
-                projectedRecords[day].meat_stock.min -= dailyKibbleConsumption * 2f / 5f;
-            }
-        }
-
-        private void UpdateCalculations()
-        {
-            //GetInGameData();
-            UpdateDates();
-            //MakePrediction();
-            predictor.MakePrediction(0);
-        }
-        // calculating number of days until certain dates
-        private void UpdateDates()
-        {
-
-            this.daysUntilWinter = ((Month.Dec - GenDate.CurrentMonth - 1) * GenDate.DaysPerMonth + (GenDate.DaysPerMonth - GenDate.DayOfMonth)); // to Dec 1st
-
-            if (GenDate.CurrentMonth > Month.Feb)
-            {
-                this.daysUntilEndofWinter = ((13 - (int)GenDate.CurrentMonth) * GenDate.DaysPerMonth + (GenDate.DaysPerMonth - GenDate.DayOfMonth));
-            }
-            else
-            {
-                this.daysUntilEndofWinter = ((Month.Feb - GenDate.CurrentMonth) * GenDate.DaysPerMonth + (GenDate.DaysPerMonth - GenDate.DayOfMonth));
-            }
-
-            if (GenDate.CurrentMonth >= Month.Mar && GenDate.CurrentMonth < Month.Nov)
-            {
-                this.daysUntilGrowingPeriodOver = ((Month.Oct - GenDate.CurrentMonth) * GenDate.DaysPerMonth + (GenDate.DaysPerMonth - GenDate.DayOfMonth));
-            }
-            else
-            {
-                this.daysUntilGrowingPeriodOver = 0;
-            }
-
-            if (GenDate.CurrentMonth > Month.Apr && GenDate.CurrentMonth <= Month.Dec)
-            {
-                this.daysUntilNextHarvestSeason = ((15 - (int)GenDate.CurrentMonth) * GenDate.DaysPerMonth + (GenDate.DaysPerMonth - GenDate.DayOfMonth));
-            }
-            else
-            {
-                this.daysUntilNextHarvestSeason = ((Month.Apr - GenDate.CurrentMonth) * GenDate.DaysPerMonth + (GenDate.DaysPerMonth - GenDate.DayOfMonth));
-            }
-        }
+        
 
         public override void DoWindowContents(Rect inRect)
         {
@@ -312,7 +176,7 @@ namespace FoodAnalyticsTab
             if (GenTicks.TicksAbs - lastUpdateTick >= (GenDate.TicksPerHour/6)) 
             {
                 lastUpdateTick = GenTicks.TicksAbs;
-                UpdateCalculations();
+                predictor.MakePrediction(0);
             }
 
 
@@ -365,15 +229,15 @@ namespace FoodAnalyticsTab
                             "\nEstimated number of kibble needed for all kibble-eaters = " + (int)dailyKibbleConsumption + ", meat =" + dailyKibbleConsumption*2/5 + ", egg=" + dailyKibbleConsumption*4/50 +
                             "\nEstimated number of hay needed daily for all animals = " + (int)dailyHayConsumption +
                             "\nNumber of days until hay in stockpiles run out = " + String.Format("{0:0.0}", numHay / dailyHayConsumption) +
-                            "\nDays Until Winter = " + this.daysUntilWinter + ", Days until growing period over = " + this.daysUntilGrowingPeriodOver +
-                            ", Days until the end of winter = " + this.daysUntilEndofWinter + ", Days until next harvest season = " + this.daysUntilNextHarvestSeason +
-                            "\nEstimated number of hay needed until winter for hay-eaters only = " + (int)(dailyHayConsumptionIndoorAnimals * this.daysUntilWinter) +
-                            "\nEstimated number of hay needed until winter for all animals = " + (int)(dailyHayConsumption * this.daysUntilWinter) +
-                            "\nEstimated number of hay needed until the end of winter for hay-eaters only = " + (int)(dailyHayConsumptionIndoorAnimals * this.daysUntilEndofWinter) +
-                            "\nEstimated number of hay needed until the end of winter for all animals = " + (int)(dailyHayConsumption * this.daysUntilEndofWinter) +
+                            "\nDays Until Winter = " + Predictor.daysUntilWinter + ", Days until growing period over = " + Predictor.daysUntilGrowingPeriodOver +
+                            ", Days until the end of winter = " + Predictor.daysUntilEndofWinter + ", Days until next harvest season = " + Predictor.daysUntilNextHarvestSeason +
+                            "\nEstimated number of hay needed until winter for hay-eaters only = " + (int)(dailyHayConsumptionIndoorAnimals * Predictor.daysUntilWinter) +
+                            "\nEstimated number of hay needed until winter for all animals = " + (int)(dailyHayConsumption * Predictor.daysUntilWinter) +
+                            "\nEstimated number of hay needed until the end of winter for hay-eaters only = " + (int)(dailyHayConsumptionIndoorAnimals * Predictor.daysUntilEndofWinter) +
+                            "\nEstimated number of hay needed until the end of winter for all animals = " + (int)(dailyHayConsumption * Predictor.daysUntilEndofWinter) +
                             "\nEstimated number of hay needed yearly for hay-eaters only = " + (int)(dailyHayConsumptionIndoorAnimals * GenDate.DaysPerMonth * GenDate.MonthsPerYear) + // 60 days
                             "\nEstimated number of hay needed yearly for all animals = " + (int)(dailyHayConsumption * GenDate.DaysPerMonth * GenDate.MonthsPerYear) + // 60 days
-                            "\nEstimated number of hay needed until next harvest season(10th of Spring) for all animals = " + (int)(dailyHayConsumption * this.daysUntilNextHarvestSeason) +
+                            "\nEstimated number of hay needed until next harvest season(10th of Spring) for all animals = " + (int)(dailyHayConsumption * Predictor.daysUntilNextHarvestSeason) +
                             "\nNumber of haygrass plant = " + (int)numHaygrass + ", outdoor = " + allHaygrassGrowth.Where(h => h.IsOutdoor).Count() +
                             "\nNumber of haygrass needed = " + dailyHayConsumption / 20 * 10 +
                             "\nEstimate of projected harvest production:\n";
@@ -428,6 +292,10 @@ namespace FoodAnalyticsTab
             {
                 foreach (LineChart c in chartList)
                 {
+                    if (Find.TickManager.Paused)
+                    {
+                        predictor.MakePrediction(0);
+                    }
                     c.UpdateData(ref predictor);
                 }
                 rect.yMin = btn.yMax;
@@ -437,11 +305,6 @@ namespace FoodAnalyticsTab
                 Rect newRect = new Rect(rect.xMin, btn.yMax, rect.width, rect.height);
                 foreach (LineChart g in chartList)
                 {
-                    //marks add dots on top of a graph, the text label is the text in the popup box
-                    g.SetMarks(this.daysUntilNextHarvestSeason, "Days until the Next Harvest Season", Color.green);
-                    g.SetMarks(this.daysUntilGrowingPeriodOver, "Days until Growing Period is Over", Color.red);
-                    g.SetMarks(this.daysUntilWinter, "Days until the Winter", Color.white);
-                    g.SetMarks(this.daysUntilEndofWinter, "Days until the End of Winter", Color.yellow);
                     g.Draw(newRect);
                     if (g.remove == true)
                     {

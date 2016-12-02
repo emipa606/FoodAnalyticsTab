@@ -162,7 +162,13 @@ namespace FoodAnalyticsTab
         }
         public void UpdateData(ref Predictor predictor)
         {
-            //foreach (Predictor.PredType t in predictor.allPredType.Values.Where(p => p.enabled == true))
+
+            //marks add dots on top of a graph, the text label is the text in the popup box
+            this.SetMarks(Predictor.daysUntilNextHarvestSeason, "Days until the Next Harvest Season", Color.green);
+            this.SetMarks(Predictor.daysUntilGrowingPeriodOver, "Days until Growing Period is Over", Color.red);
+            this.SetMarks(Predictor.daysUntilWinter, "Days until the Winter", Color.white);
+            this.SetMarks(Predictor.daysUntilEndofWinter, "Days until the End of Winter", Color.yellow);
+
             foreach (String s in this.setting.graphEnable.Where(x => x.Value == true).Select(x => x.Key))
             {
                 Color c1, c2;
