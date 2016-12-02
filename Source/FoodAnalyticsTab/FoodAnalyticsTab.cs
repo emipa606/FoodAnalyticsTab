@@ -100,9 +100,9 @@ namespace FoodAnalyticsTab
             predictor.predictionEnable["Haygrass"] = true;
             chartList.Add( new LineChart(nextNDays, ref predictor.predictionEnable));
 
-            dpList.Add(new DataPoint(GenDate.DateFullStringAt(GenTicks.TicksAbs)));
+            //dpList.Add(new DataPoint(GenDate.DateFullStringAt(GenTicks.TicksAbs)));
             //ML.WriteToXmlFile<List<DataPoint>>("C://datapoint.xml", dpList);
-            //XmlSaver.SaveDataObject(dpList, "./datapoint.xml");
+
         }
         public override Vector2 RequestedTabSize
         {
@@ -119,10 +119,10 @@ namespace FoodAnalyticsTab
             {
                 UpdateCalculations();
             }
-            //List<DataPoint> dpList = ML.ReadFromXmlFile<List<DataPoint>>("./datapoint.xml");
-            dpList.Add(new DataPoint(GenDate.DateFullStringAt(GenTicks.TicksAbs)));
-            //ML.WriteToXmlFile<List<DataPoint>>("datapoint.xml", dpList); // didn't work
-            ML.WriteToBinaryFile<List<DataPoint>>("datapoint.dat", dpList);// save file under main dir
+
+            //dpList.Add(new DataPoint(GenDate.DateFullStringAt(GenTicks.TicksAbs)));
+
+            //ML.WriteToBinaryFile<List<DataPoint>>("datapoint.dat", dpList);// save file under main dir
         }
 
         private void GetInGameData()
@@ -389,6 +389,10 @@ namespace FoodAnalyticsTab
             foreach (var v in debug_val)
             {
                 analysis += v + ",";
+            }
+            foreach (string s in predictor.predictionEnable.Keys)
+            {
+                analysis += s + ",";
             }
             /*
             foreach (ThingDef x in plantDef)

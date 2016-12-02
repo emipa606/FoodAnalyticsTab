@@ -167,14 +167,16 @@ namespace FoodAnalyticsTab
             {
                 Color c1, c2;
                 GenerateRandomColorPair(this.setting.graphEnable.Keys.ToList().FindIndex(x => x == s), out c1, out c2);
-                this.SetCurve(s + " Yield(Max)", c1, predictor.allPredType[s].projectedPred.Select(x => (float) x.yield.max).ToList());
-                this.SetCurve(s + " Yield(Min)", c2, predictor.allPredType[s].projectedPred.Select(x => (float)x.yield.min).ToList());
+                this.SetCurve(CultureInfo.CurrentCulture.TextInfo.ToTitleCase(predictor.allPredType[s].def.plant.harvestedThingDef.label) + " Yield(Max)", 
+                    c1, predictor.allPredType[s].projectedPred.Select(x => (float) x.yield.max).ToList());
+                this.SetCurve(CultureInfo.CurrentCulture.TextInfo.ToTitleCase(predictor.allPredType[s].def.plant.harvestedThingDef.label) + " Yield(Min)", 
+                    c2, predictor.allPredType[s].projectedPred.Select(x => (float)x.yield.min).ToList());
             }
 
             foreach (String s in this.setting.graphEnable.Where(x => x.Value == false).Select(x => x.Key))
             {
-                this.RemoveCurve(s + " Yield(Max)");
-                this.RemoveCurve(s + " Yield(Min)");
+                this.RemoveCurve(CultureInfo.CurrentCulture.TextInfo.ToTitleCase(predictor.allPredType[s].def.plant.harvestedThingDef.label) + " Yield(Max)");
+                this.RemoveCurve(CultureInfo.CurrentCulture.TextInfo.ToTitleCase(predictor.allPredType[s].def.plant.harvestedThingDef.label) + " Yield(Min)");
             }
         }
         

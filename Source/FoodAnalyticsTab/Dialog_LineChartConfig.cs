@@ -198,7 +198,7 @@ namespace FoodAnalyticsTab
             foreach (String s in setting.graphEnable.Keys.ToList())
             {
                 bool flag = setting.graphEnable[s];
-                listing_Standard.CheckboxLabeled(CultureInfo.CurrentCulture.TextInfo.ToTitleCase(s), ref flag);
+                listing_Standard.CheckboxLabeled(s, ref flag);
                 setting.graphEnable[s] = flag;
             }
             listing_Standard.End();
