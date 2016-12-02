@@ -192,7 +192,7 @@ namespace FoodAnalyticsTab
             }
             Text.Font = GameFont.Small;
             centerRect.yMin = rect2.yMax;
-            Rect viewRect = new Rect(0, 0f, centerRect.width - 16f, setting.graphEnable.Count()*20);
+            Rect viewRect = new Rect(0, 0f, centerRect.width - 16f, setting.graphEnable.Count()*(Text.LineHeight + listing_Standard.verticalSpacing));
             Widgets.BeginScrollView(centerRect, ref scrollPosition, viewRect);
             listing_Standard = new Listing_Standard(new Rect(6, 0, viewRect.width-6, viewRect.height));
             foreach (String s in setting.graphEnable.Keys.ToList())
