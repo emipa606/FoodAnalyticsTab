@@ -14,7 +14,8 @@ namespace FoodAnalyticsTab
          projected yield, stock, population
          work, time
 
-       TODO:show deficiency
+       TODO:show deficiency, it turns out that if the current Predictor class design use MinMax object to show deficiency, then deficiency will be shown to all graph
+       unless it's computed every time for each graph which is not optimal, or two versions can be kept, which is also not optimal
 
        internal:
          SimpleCurveDrawerStyle

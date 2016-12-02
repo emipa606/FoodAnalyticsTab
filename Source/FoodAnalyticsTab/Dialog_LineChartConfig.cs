@@ -57,7 +57,7 @@ namespace FoodAnalyticsTab
         {
             Text.Font = GameFont.Medium;
             Rect titleRect = new Rect(0f, 0f, 400f, 50f);
-            Widgets.Label(titleRect, "Graph Settings");
+            Widgets.Label(titleRect, "Graph Settings"); // TODO: add renaming button
             Text.Font = GameFont.Small;
             Rect listerRect = new Rect(0f, titleRect.yMax, 180f, inRect.height - titleRect.height);
             Listing_Standard listing_Standard = new Listing_Standard(listerRect);
@@ -180,6 +180,9 @@ namespace FoodAnalyticsTab
                 foreach (String s in setting.graphEnable.Keys.ToList())
                 {
                     setting.graphEnable[s] = false;
+
+                    MainTabWindow_Estimator.predictor.predictionEnable[s] = false;
+                    MainTabWindow_Estimator.predictor.allPredType[s].enabled = false;
                 }
             }
             Rect rect3 = new Rect(rect2.xMax + 1f, rect2.y, num / 2f, 24f);
@@ -188,6 +191,9 @@ namespace FoodAnalyticsTab
                 foreach (String s in setting.graphEnable.Keys.ToList())
                 {
                     setting.graphEnable[s] = true;
+                    MainTabWindow_Estimator.predictor.predictionEnable[s] = true;
+                    MainTabWindow_Estimator.predictor.allPredType[s].enabled = true;
+                    MainTabWindow_Estimator.predictor.MakePrediction(0); // TODO: if paused prevent calling 2nd time
                 }
             }
             Text.Font = GameFont.Small;
@@ -197,13 +203,14 @@ namespace FoodAnalyticsTab
             listing_Standard = new Listing_Standard(new Rect(6, 0, viewRect.width-6, viewRect.height));
             foreach (String s in setting.graphEnable.Keys.ToList())
             {
-                bool flag = setting.graphEnable[s];
-                listing_Standard.CheckboxLabeled(s, ref flag);
-                if (flag != setting.graphEnable[s])
+                bool checkFlag = setting.graphEnable[s];
+                bool selectFlag = false;
+                listing_Standard.CheckboxLabeledSelectable(s, ref selectFlag, ref checkFlag); // TODO: use select flag to show a rect on the right to allow selecting yield, consumption, stock, population
+                if (checkFlag != setting.graphEnable[s])
                 {
-                    setting.graphEnable[s] = flag;
-                    MainTabWindow_Estimator.predictor.predictionEnable[s] = flag;
-                    MainTabWindow_Estimator.predictor.allPredType[s].enabled = flag;
+                    setting.graphEnable[s] = checkFlag;
+                    MainTabWindow_Estimator.predictor.predictionEnable[s] = checkFlag;
+                    MainTabWindow_Estimator.predictor.allPredType[s].enabled = checkFlag;
   
                     MainTabWindow_Estimator.predictor.MakePrediction(0);
                 }

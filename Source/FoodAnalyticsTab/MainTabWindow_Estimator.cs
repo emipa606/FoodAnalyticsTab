@@ -249,7 +249,7 @@ namespace FoodAnalyticsTab
 
         private void DisplayGraphPage(Rect rect)
         {
-            Rect btn = new Rect(rect.xMin, rect.yMin, 110f, 40f);
+            Rect btn = new Rect(0, rect.yMin + 6, 110f, 40f);
             if (Widgets.ButtonText(btn, "New Chart", true, false, true))
             {
                 chartList.Add(new LineChart(60, ref predictor.predictionEnable));
@@ -267,8 +267,8 @@ namespace FoodAnalyticsTab
                 // start drawing all charts
                 rect.yMin = btn.yMax;
                 Widgets.BeginScrollView(rect, ref this.scrollPos[(int)FoodAnalyticsTab.Graph],
-                    new Rect(rect.x, rect.yMin, chartList[0].rect.width, chartList[0].rect.height * chartList.Count())); //TODO: figure out how to obtain viewRect
-                                                                                                                      //nextNDays = (int) graphList[0].Draw(rect);
+                    new Rect(rect.x, rect.yMin, chartList[0].rect.width, chartList[0].rect.height * chartList.Count())); 
+                                                                                                                      
                 Rect newRect = new Rect(rect.xMin, btn.yMax, rect.width, rect.height);
                 foreach (LineChart g in chartList)
                 {
@@ -294,10 +294,52 @@ namespace FoodAnalyticsTab
         {
             
         }
+        
         private void DisplayDetailedListPage(Rect rect)
         {
-            GUI.BeginGroup(rect);
-            Widgets.ButtonText(new Rect(0, 0, 110f, 40f), "test".Translate(), true, false, true);
+            var offset = true;
+            var x = 0;
+
+            var nameLabel = new Rect(x, rect.yMin + 50f, 175f, 30f);
+            Text.Anchor = TextAnchor.LowerCenter;
+            Widgets.Label(nameLabel, "FluffyMedical.Name".Translate());
+            
+            TooltipHandler.TipRegion(nameLabel,
+                                      "FluffyMedical.ClickToSortBy".Translate("FluffyMedical.Name".Translate()));
+            Widgets.DrawHighlightIfMouseover(nameLabel);
+            x += 175;
+            // extra 15f offset for... what? makes labels roughly align.
+            List<String> headerNames = new List<String>(){"Total","Adult","Teen","Baby", "Daily Consumption[nut]", "Daily Consumption[hay]"};
+            var colWidth = (rect.width - x - 15f) / headerNames.Count;
+            for (var i = 0; i < headerNames.Count; i++)
+            {
+                var labelRect = new Rect(x + colWidth * i - colWidth / 2, rect.yMin + 10 + (offset ? 10f : 40f), colWidth * 2,
+                                         30f);
+                Widgets.DrawLine(new Vector2(x + colWidth * (i + 1) - colWidth / 2, rect.yMin + 40f + (offset ? 5f : 35f)),
+                                  new Vector2(x + colWidth * (i + 1) - colWidth / 2, rect.yMin + 80f), Color.gray, 1);
+                Widgets.Label(labelRect, headerNames[i]);
+                /*
+                if (Widgets.ButtonInvisible(defLabel))
+                {
+                    if (OrderBy == Order.Efficiency && OrderByCapDef == CapDefs[i])
+                    {
+                        Asc = !Asc;
+                    }
+                    else
+                    {
+                        OrderBy = Order.Efficiency;
+                        OrderByCapDef = CapDefs[i];
+                        Asc = true;
+                    }
+                    IsDirty = true;
+                }
+                //*/
+                TooltipHandler.TipRegion(labelRect, "FluffyMedical.ClickToSortBy".Translate(headerNames[i]));
+                Widgets.DrawHighlightIfMouseover(labelRect);
+
+                offset = !offset;
+            }
+
             GUI.EndGroup();
         }
     }
