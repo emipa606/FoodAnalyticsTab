@@ -122,9 +122,10 @@ namespace FoodAnalyticsTab
             public int numTeen;
             public int numAdult;
             public int numTotal;
+            
             public float totalNutr;
-
-            public Consumer(string s, RaceProperties r, int infant, int teen, int adult, float nut)
+            public float numFood;
+            public Consumer(string s, RaceProperties r, int infant, int teen, int adult, float nut, float food)
             {
                 label = s;
                 numAdult = adult;
@@ -132,6 +133,7 @@ namespace FoodAnalyticsTab
                 numInfant = infant;
                 numTotal = numAdult + numTeen + numInfant;
                 totalNutr = nut;
+                numFood = food;
                 prop = r;
             }
         }
@@ -157,7 +159,7 @@ namespace FoodAnalyticsTab
                 Where(x => x.def.defName == "Chicken" && x.gender == Gender.Female &&
                       x.ageTracker.CurLifeStage.defName == "AnimalAdult").Count(); // x.def.defName == "Chicken" worked, but x.Label == "chicken" didn't work
 
-            float hayNut = 1;// DefDatabase<ThingDef>.AllDefs.First(x => x.label == "Hay").ingestible.nutrition;
+            float hayNut = DefDatabase<ThingDef>.AllDefs.Where(x => x.ingestible != null && x.defName == "Hay").FirstOrDefault().ingestible.nutrition;
             dailyHayConsumptionIndoorAnimals = roughAnimals.Where(a => a.Position.GetRoomOrAdjacent().UsesOutdoorTemperature)
                            .Sum(x => x.needs.food.FoodFallPerTick) * GenDate.TicksPerDay / hayNut;
             dailyHayConsumptionRoughAnimals = roughAnimals.Sum(x => x.needs.food.FoodFallPerTick) * GenDate.TicksPerDay / hayNut;
@@ -172,21 +174,31 @@ namespace FoodAnalyticsTab
             numHaygrass = allHaygrass.Count();
             numHay = Find.ListerThings.AllThings.Where(x => x.def.label == "hay").Sum(x => x.stackCount);
 
-            //Consumers c = new Consumers();
-            //consList.Add(c);
+            
+            
 
             consList.Clear();
-            
+            consList.Add(new Consumer(
+                "Human",
+                DefDatabase<ThingDef>.AllDefs.Where(x => x.race != null && x.defName == "Human").FirstOrDefault().race,
+                pawns.Where(x => x.RaceProps.Humanlike && x.ageTracker.CurLifeStage.defName == "HumanlikeChild" ).Count(),
+                pawns.Where(x => x.RaceProps.Humanlike && x.ageTracker.CurLifeStage.defName == "HumanlikeTeenager").Count(),
+                pawns.Where(x => x.RaceProps.Humanlike && x.ageTracker.CurLifeStage.defName == "HumanlikeAdult").Count(),
+                pawns.Where(x => x.RaceProps.Humanlike).Sum(x => x.needs.food.FoodFallPerTick) * GenDate.TicksPerDay,
+                0
+                ));
             foreach (var a in DefDatabase<ThingDef>.AllDefs.Where(x => x.race != null && x.race.Animal).OrderBy(x => x.defName))
             {
                 var type = pawns.Where(x => x.RaceProps.Animal && x.def.defName == a.defName);
+                float totalNut = type.Sum(x => x.needs.food.FoodFallPerTick) * GenDate.TicksPerDay;
                 consList.Add(new Consumer(
                     a.defName,
                     a.race,
                     type.Where(x => x.ageTracker.CurLifeStage.defName == "AnimalBaby").Count(),
                     type.Where(x => x.ageTracker.CurLifeStage.defName == "AnimalJuvenile").Count(),
                     type.Where(x => x.ageTracker.CurLifeStage.defName == "AnimalAdult").Count(),
-                    type.Sum(x => x.needs.food.FoodFallPerTick) * GenDate.TicksPerDay
+                    totalNut,
+                    totalNut / hayNut
                     ));               
             }
             // TODO: Find.ZoneManager.AllZones, potentially look at unplannted cells in growing zones and predict work amount and complete time.
@@ -421,7 +433,7 @@ namespace FoodAnalyticsTab
 
             x += 175;
             // extra 15f offset for... what? makes labels roughly align.
-            List<String> headerNames = new List<String>(){"Total","Adult","Teen","Baby", "Daily Consumption[nut]", "Daily Consumption[hay]"};
+            List<String> headerNames = new List<String>(){"Total","Adult","Teen","Baby", "Daily Consumption\n[nut]", "Daily Consumption[hay]"};
             var colWidth = (rect.width - x) / headerNames.Count;
             
             for (var i = 0; i < headerNames.Count; i++)
@@ -452,6 +464,9 @@ namespace FoodAnalyticsTab
                         case 4:
                             listing.Label(String.Format("{0:0.00}", c.totalNutr));
                             break;
+                        case 5:
+                            listing.Label(String.Format("{0:0.0}", c.numFood));
+                            break;
                     }
                 }
                 switch (i)
@@ -470,6 +485,9 @@ namespace FoodAnalyticsTab
                         break;
                     case 4:
                         listing.Label(String.Format("{0:0.00}", consList.Sum(c => c.totalNutr)));
+                        break;
+                    case 5:
+                        listing.Label(String.Format("{0:0.0}", consList.Sum(c => c.numFood)));
                         break;
                 }
                 listing.End();
