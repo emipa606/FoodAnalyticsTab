@@ -8,64 +8,6 @@ using System.Globalization;
 
 namespace FoodAnalyticsTab
 {
-    class Prediction
-    {
-        public class MinMax
-        {
-            public bool showDeficiency { get; set; } = false;
-            private float _min, _max;
-            public float min
-            {
-                get { return _min; }
-                set
-                {
-                    _min = value;
-                    if (showDeficiency != true && value < 0)
-                    {
-                        _min = 0;
-                    }
-                }
-            }
-            public float max
-            {
-                get { return _max; }
-                set
-                {
-                    _max = value;
-                    if (showDeficiency != true && value < 0)
-                    {
-                        _max = 0;
-                    }
-                }
-            }
-        }
-        private bool _showDeficiency;
-        public bool showDeficiency
-        {
-            get { return _showDeficiency; }
-            set
-            {
-                _showDeficiency = hay_yield.showDeficiency = hay_stock.showDeficiency = meat_stock.showDeficiency =
-                    animal_population.showDeficiency = hay_consumption.showDeficiency = value;
-            }
-        }
-
-        public Prediction(MinMax a, MinMax b, MinMax c, MinMax d, MinMax e)
-        {
-            hay_yield = a;
-            hay_stock = b;
-            hay_consumption = c;
-            meat_stock = d;
-            animal_population = e;
-            showDeficiency = false;
-        }
-        public MinMax hay_yield { get; set; }
-        public MinMax hay_stock { get; set; }
-        public MinMax meat_stock { get; set; }
-        public MinMax animal_population { get; set; }
-        public MinMax hay_consumption { get; set; }
-    };
-
     /* prediction class:
        making prediction 
        types: crop/population/meat yield, vegie/meat/meal/drug/leather/population stock, 

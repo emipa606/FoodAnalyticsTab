@@ -22,7 +22,7 @@ namespace FoodAnalyticsTab
          are settings changed        
     */
 
-    public class ChartSettings
+    public class ChartSettings : MapComponent
     {
         public Dictionary<String, bool> graphEnable = new Dictionary<String, bool>();
         public bool ShowDeficiency, DrawPoints, UseAntiAliasedLines, EnableLearning, EnableOutdoorAnimalDetection,

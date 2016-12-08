@@ -19,6 +19,15 @@ using UnityEngine;
 
 namespace FoodAnalyticsTab
 {
+    public class NoteType : MapComponent
+    {
+        public string text = "";
+        public override void ExposeData()
+        {
+            Scribe_Values.LookValue(ref this.text, "NotePageText");
+        }
+    }
+
     [StaticConstructorOnStartup]
     public class MainTabWindow_Estimator : MainTabWindow
     {
@@ -28,7 +37,8 @@ namespace FoodAnalyticsTab
             Graph= 0,
             Analytics = 1,
             Help = 2,
-            DetailedList = 3
+            DetailedList = 3,
+            Note = 4
         }
         private MainTabWindow_Estimator.FoodAnalyticsTab curTab = FoodAnalyticsTab.Graph, prevTab = FoodAnalyticsTab.Analytics;
         Vector2[] scrollPos = new Vector2[3] { Vector2.zero, Vector2.zero, Vector2.zero }; // for scrolling view
@@ -49,7 +59,7 @@ namespace FoodAnalyticsTab
         List<LineChart> chartList = new List<LineChart>();
 
         //List<ThingDef> plantDef = new List<ThingDef>();
-        
+        private NoteType note;
 
         [Serializable]
         class DataPoint
@@ -73,6 +83,13 @@ namespace FoodAnalyticsTab
             predictor.predictionEnable["Haygrass"] = true;
             chartList.Add( new LineChart(nextNDays, ref predictor.predictionEnable));
 
+            NoteType getComponent = Find.Map.components.OfType<NoteType>().FirstOrDefault();
+            if (getComponent == null)
+            {
+                getComponent = new NoteType();
+                Find.Map.components.Add(getComponent);
+            }
+            note = getComponent;
             //dpList.Add(new DataPoint(GenDate.DateFullStringAt(GenTicks.TicksAbs)));
             //ML.WriteToXmlFile<List<DataPoint>>("C://datapoint.xml", dpList);
 
@@ -167,6 +184,10 @@ namespace FoodAnalyticsTab
             {
                 this.curTab = FoodAnalyticsTab.Help;
             }, this.curTab == FoodAnalyticsTab.Help));
+            list.Add(new TabRecord("Note", delegate
+            {
+                this.curTab = FoodAnalyticsTab.Note;
+            }, this.curTab == FoodAnalyticsTab.Note));
 
             TabDrawer.DrawTabs(rect2, list);
 
@@ -182,9 +203,19 @@ namespace FoodAnalyticsTab
             } else if (this.curTab == FoodAnalyticsTab.DetailedList)
             {
                 this.DisplayDetailedListPage(rect2);
+            } else if (this.curTab == FoodAnalyticsTab.Note)
+            {
+                this.DisplayNotePage(rect2);
             }
         }
 
+        
+
+        private void DisplayNotePage(Rect rect)
+        {
+            rect.y += 6;
+            note.text = GUI.TextArea(rect, note.text);
+        }
         private void DisplayAnalyticsPage(Rect rect)
         {
             // constructing string
@@ -294,29 +325,55 @@ namespace FoodAnalyticsTab
         {
             
         }
-        
+
+        public enum SourceOptions
+        {
+            Plants,
+            Animals
+        }
+        public SourceOptions Source = SourceOptions.Animals;
+        public static bool IsDirty;
         private void DisplayDetailedListPage(Rect rect)
         {
-            var offset = true;
+            GUI.BeginGroup(rect);
             var x = 0;
+            var sourceButton = new Rect(0f, 6f, 200f, 35f);
+            if (Widgets.ButtonText(sourceButton, Source.ToString().Translate()))
+            {
+                List<FloatMenuOption> options = new List<FloatMenuOption>();
+                if (Source != SourceOptions.Plants)
+                    options.Add(new FloatMenuOption("Plants", delegate {
+                        Source = SourceOptions.Plants;
+                        IsDirty = true;
+                    }));
 
-            var nameLabel = new Rect(x, rect.yMin + 50f, 175f, 30f);
-            Text.Anchor = TextAnchor.LowerCenter;
-            Widgets.Label(nameLabel, "FluffyMedical.Name".Translate());
+                if (Source != SourceOptions.Animals)
+                    options.Add(new FloatMenuOption("Animals", delegate {
+                        Source = SourceOptions.Animals;
+                        IsDirty = true;
+                    }));
+
+                Find.WindowStack.Add(new FloatMenu(options));
+            }
+            var offset = true;
+            List<PawnKindDef> pawnTypeList = DefDatabase<PawnKindDef>.AllDefs.Where(a => a.RaceProps.Animal).ToList();
+
+            var nameLabel = new Rect(x, sourceButton.height + 50f, 175f, 30f);
+            Text.Anchor = TextAnchor.MiddleCenter;
+            Widgets.Label(nameLabel, "Name");
             
-            TooltipHandler.TipRegion(nameLabel,
-                                      "FluffyMedical.ClickToSortBy".Translate("FluffyMedical.Name".Translate()));
+            TooltipHandler.TipRegion(nameLabel, "ClickToSortByName");
             Widgets.DrawHighlightIfMouseover(nameLabel);
             x += 175;
             // extra 15f offset for... what? makes labels roughly align.
             List<String> headerNames = new List<String>(){"Total","Adult","Teen","Baby", "Daily Consumption[nut]", "Daily Consumption[hay]"};
-            var colWidth = (rect.width - x - 15f) / headerNames.Count;
+            var colWidth = (rect.width - x) / headerNames.Count;
             for (var i = 0; i < headerNames.Count; i++)
             {
-                var labelRect = new Rect(x + colWidth * i - colWidth / 2, rect.yMin + 10 + (offset ? 10f : 40f), colWidth * 2,
+                var labelRect = new Rect(x + colWidth * i - colWidth / 2, sourceButton.height + 10 + (offset ? 10f : 40f), colWidth * 2,
                                          30f);
-                Widgets.DrawLine(new Vector2(x + colWidth * (i + 1) - colWidth / 2, rect.yMin + 40f + (offset ? 5f : 35f)),
-                                  new Vector2(x + colWidth * (i + 1) - colWidth / 2, rect.yMin + 80f), Color.gray, 1);
+                Widgets.DrawLine(new Vector2(x + colWidth * (i + 1) - colWidth / 2,  sourceButton.height + 40f + (offset ? 5f : 35f)),
+                                  new Vector2(x + colWidth * (i + 1) - colWidth / 2,  sourceButton.height + 80f), Color.gray, 1);
                 Widgets.Label(labelRect, headerNames[i]);
                 /*
                 if (Widgets.ButtonInvisible(defLabel))
@@ -334,7 +391,7 @@ namespace FoodAnalyticsTab
                     IsDirty = true;
                 }
                 //*/
-                TooltipHandler.TipRegion(labelRect, "FluffyMedical.ClickToSortBy".Translate(headerNames[i]));
+                TooltipHandler.TipRegion(labelRect, "ClickToSortBy" + (headerNames[i]));
                 Widgets.DrawHighlightIfMouseover(labelRect);
 
                 offset = !offset;
