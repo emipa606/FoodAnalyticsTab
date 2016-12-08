@@ -32,7 +32,7 @@ namespace FoodAnalyticsTab
     public class MainTabWindow_Estimator : MainTabWindow
     {
         //graphics 
-        private enum FoodAnalyticsTab : byte
+        private enum TabType : byte
         {
             Graph= 0,
             Analytics = 1,
@@ -40,7 +40,7 @@ namespace FoodAnalyticsTab
             DetailedList = 3,
             Note = 4
         }
-        private MainTabWindow_Estimator.FoodAnalyticsTab curTab = FoodAnalyticsTab.Graph, prevTab = FoodAnalyticsTab.Analytics;
+        private MainTabWindow_Estimator.TabType curTab = TabType.Graph, prevTab = TabType.Analytics;
         Vector2[] scrollPos = new Vector2[3] { Vector2.zero, Vector2.zero, Vector2.zero }; // for scrolling view
 
         protected float lastUpdate = -1f;
@@ -57,8 +57,7 @@ namespace FoodAnalyticsTab
     
         public static Predictor predictor = new Predictor();
         List<LineChart> chartList = new List<LineChart>();
-
-        //List<ThingDef> plantDef = new List<ThingDef>();
+        
         private NoteType note;
 
         [Serializable]
@@ -73,7 +72,6 @@ namespace FoodAnalyticsTab
         // functions
         public MainTabWindow_Estimator () : base()
         {
-
             this.doCloseX = true;
             this.doCloseButton = false;
             this.closeOnClickedOutside = false;
@@ -107,6 +105,7 @@ namespace FoodAnalyticsTab
             base.PreOpen();
             if (Find.TickManager.Paused)
             {
+                GetInGameData();
                 predictor.MakePrediction(0);
             }
 
@@ -114,6 +113,30 @@ namespace FoodAnalyticsTab
 
             //ML.WriteToBinaryFile<List<DataPoint>>("datapoint.dat", dpList);// save file under main dir
         }
+
+        class Consumer
+        {
+            public string label;
+            public RaceProperties prop;
+            public int numInfant;
+            public int numTeen;
+            public int numAdult;
+            public int numTotal;
+            public float totalNutr;
+
+            public Consumer(string s, RaceProperties r, int infant, int teen, int adult, float nut)
+            {
+                label = s;
+                numAdult = adult;
+                numTeen = teen;
+                numInfant = infant;
+                numTotal = numAdult + numTeen + numInfant;
+                totalNutr = nut;
+                prop = r;
+            }
+        }
+
+        List<Consumer> consList = new List<Consumer>();
 
         private void GetInGameData()
         {
@@ -134,7 +157,7 @@ namespace FoodAnalyticsTab
                 Where(x => x.def.defName == "Chicken" && x.gender == Gender.Female &&
                       x.ageTracker.CurLifeStage.defName == "AnimalAdult").Count(); // x.def.defName == "Chicken" worked, but x.Label == "chicken" didn't work
 
-            float hayNut = 1f;
+            float hayNut = 1;// DefDatabase<ThingDef>.AllDefs.First(x => x.label == "Hay").ingestible.nutrition;
             dailyHayConsumptionIndoorAnimals = roughAnimals.Where(a => a.Position.GetRoomOrAdjacent().UsesOutdoorTemperature)
                            .Sum(x => x.needs.food.FoodFallPerTick) * GenDate.TicksPerDay / hayNut;
             dailyHayConsumptionRoughAnimals = roughAnimals.Sum(x => x.needs.food.FoodFallPerTick) * GenDate.TicksPerDay / hayNut;
@@ -148,7 +171,24 @@ namespace FoodAnalyticsTab
 
             numHaygrass = allHaygrass.Count();
             numHay = Find.ListerThings.AllThings.Where(x => x.def.label == "hay").Sum(x => x.stackCount);
+
+            //Consumers c = new Consumers();
+            //consList.Add(c);
+
+            consList.Clear();
             
+            foreach (var a in DefDatabase<ThingDef>.AllDefs.Where(x => x.race != null && x.race.Animal).OrderBy(x => x.defName))
+            {
+                var type = pawns.Where(x => x.RaceProps.Animal && x.def.defName == a.defName);
+                consList.Add(new Consumer(
+                    a.defName,
+                    a.race,
+                    type.Where(x => x.ageTracker.CurLifeStage.defName == "AnimalBaby").Count(),
+                    type.Where(x => x.ageTracker.CurLifeStage.defName == "AnimalJuvenile").Count(),
+                    type.Where(x => x.ageTracker.CurLifeStage.defName == "AnimalAdult").Count(),
+                    type.Sum(x => x.needs.food.FoodFallPerTick) * GenDate.TicksPerDay
+                    ));               
+            }
             // TODO: Find.ZoneManager.AllZones, potentially look at unplannted cells in growing zones and predict work amount and complete time.
             // look at Zone_Growing class , ZoneManager class
         }
@@ -169,47 +209,45 @@ namespace FoodAnalyticsTab
             List<TabRecord> list = new List<TabRecord>();
             list.Add(new TabRecord("Graph".Translate(), delegate
             {
-                this.curTab = FoodAnalyticsTab.Graph;
-            }, this.curTab == FoodAnalyticsTab.Graph));
+                this.curTab = TabType.Graph;
+            }, this.curTab == TabType.Graph));
 
             list.Add(new TabRecord("Analytics", delegate
             {
-                this.curTab = FoodAnalyticsTab.Analytics;
-            }, this.curTab == FoodAnalyticsTab.Analytics));
+                this.curTab = TabType.Analytics;
+            }, this.curTab == TabType.Analytics));
             list.Add(new TabRecord("Detailed List", delegate
             {
-                this.curTab = FoodAnalyticsTab.DetailedList;
-            }, this.curTab == FoodAnalyticsTab.DetailedList));
+                this.curTab = TabType.DetailedList;
+            }, this.curTab == TabType.DetailedList));
             list.Add(new TabRecord("Help", delegate
             {
-                this.curTab = FoodAnalyticsTab.Help;
-            }, this.curTab == FoodAnalyticsTab.Help));
+                this.curTab = TabType.Help;
+            }, this.curTab == TabType.Help));
             list.Add(new TabRecord("Note", delegate
             {
-                this.curTab = FoodAnalyticsTab.Note;
-            }, this.curTab == FoodAnalyticsTab.Note));
+                this.curTab = TabType.Note;
+            }, this.curTab == TabType.Note));
 
             TabDrawer.DrawTabs(rect2, list);
 
-            if (this.curTab == FoodAnalyticsTab.Graph)
+            if (this.curTab == TabType.Graph)
             {
                 this.DisplayGraphPage(rect2);
-            } else if (this.curTab == FoodAnalyticsTab.Analytics)
+            } else if (this.curTab == TabType.Analytics)
             {
                 this.DisplayAnalyticsPage(rect2);
-            } else if (this.curTab == FoodAnalyticsTab.Help)
+            } else if (this.curTab == TabType.Help)
             {
                 this.DisplayHelpPage(rect2);
-            } else if (this.curTab == FoodAnalyticsTab.DetailedList)
+            } else if (this.curTab == TabType.DetailedList)
             {
                 this.DisplayDetailedListPage(rect2);
-            } else if (this.curTab == FoodAnalyticsTab.Note)
+            } else if (this.curTab == TabType.Note)
             {
                 this.DisplayNotePage(rect2);
             }
-        }
-
-        
+        }  
 
         private void DisplayNotePage(Rect rect)
         {
@@ -250,14 +288,22 @@ namespace FoodAnalyticsTab
             }
             */
             
+            /*
             foreach (var v in debug_val)
             {
                 analysis += v + ",";
             }
+
             foreach (string s in predictor.predictionEnable.Keys)
             {
                 analysis += s + ",";
             }
+            foreach (var c in consList)
+            {
+                analysis += "\ntype=" + c.label + ",infant=" + c.numInfant + ",teen=" + c.numTeen + ",adult=" + c.numAdult + ",nut=" + c.totalNutr;
+            }
+            //*/
+
             /*
             foreach (ThingDef x in plantDef)
             {
@@ -273,7 +319,7 @@ namespace FoodAnalyticsTab
             Text.Anchor = TextAnchor.UpperLeft;
             Text.Font = GameFont.Small;
             Rect rect2 = new Rect(0, 0, rect.width, analysis.Split('\n').Length * 20);
-            Widgets.BeginScrollView(rect, ref this.scrollPos[(int)FoodAnalyticsTab.Analytics], rect2);
+            Widgets.BeginScrollView(rect, ref this.scrollPos[(int)TabType.Analytics], rect2);
             Widgets.Label(rect2, analysis);
             Widgets.EndScrollView();
         }
@@ -297,7 +343,7 @@ namespace FoodAnalyticsTab
 
                 // start drawing all charts
                 rect.yMin = btn.yMax;
-                Widgets.BeginScrollView(rect, ref this.scrollPos[(int)FoodAnalyticsTab.Graph],
+                Widgets.BeginScrollView(rect, ref this.scrollPos[(int)TabType.Graph],
                     new Rect(rect.x, rect.yMin, chartList[0].rect.width, chartList[0].rect.height * chartList.Count())); 
                                                                                                                       
                 Rect newRect = new Rect(rect.xMin, btn.yMax, rect.width, rect.height);
@@ -335,7 +381,7 @@ namespace FoodAnalyticsTab
         public static bool IsDirty;
         private void DisplayDetailedListPage(Rect rect)
         {
-            GUI.BeginGroup(rect);
+            GUI.BeginGroup(rect); // TODO: figure out how to do scroll view below titles
             var x = 0;
             var sourceButton = new Rect(0f, 6f, 200f, 35f);
             if (Widgets.ButtonText(sourceButton, Source.ToString().Translate()))
@@ -358,23 +404,76 @@ namespace FoodAnalyticsTab
             var offset = true;
             List<PawnKindDef> pawnTypeList = DefDatabase<PawnKindDef>.AllDefs.Where(a => a.RaceProps.Animal).ToList();
 
-            var nameLabel = new Rect(x, sourceButton.height + 50f, 175f, 30f);
+            var nameRect = new Rect(x, sourceButton.height + 50f, 175f, 30f);
             Text.Anchor = TextAnchor.MiddleCenter;
-            Widgets.Label(nameLabel, "Name");
-            
-            TooltipHandler.TipRegion(nameLabel, "ClickToSortByName");
-            Widgets.DrawHighlightIfMouseover(nameLabel);
+            Widgets.Label(nameRect, "Name");
+
+            TooltipHandler.TipRegion(nameRect, "ClickToSortByName");
+            Widgets.DrawHighlightIfMouseover(nameRect);
+
+            Listing_Standard listing = new Listing_Standard(new Rect(nameRect.x, nameRect.yMax, nameRect.width, consList.Count() * 30));
+            foreach (var c in consList.Where(cc => cc.numTotal > 0))
+            {
+                listing.Label(c.label.ToString());
+            }
+            listing.Label("Total");
+            listing.End();
+
             x += 175;
             // extra 15f offset for... what? makes labels roughly align.
             List<String> headerNames = new List<String>(){"Total","Adult","Teen","Baby", "Daily Consumption[nut]", "Daily Consumption[hay]"};
             var colWidth = (rect.width - x) / headerNames.Count;
+            
             for (var i = 0; i < headerNames.Count; i++)
             {
                 var labelRect = new Rect(x + colWidth * i - colWidth / 2, sourceButton.height + 10 + (offset ? 10f : 40f), colWidth * 2,
                                          30f);
-                Widgets.DrawLine(new Vector2(x + colWidth * (i + 1) - colWidth / 2,  sourceButton.height + 40f + (offset ? 5f : 35f)),
-                                  new Vector2(x + colWidth * (i + 1) - colWidth / 2,  sourceButton.height + 80f), Color.gray, 1);
+                Widgets.DrawLine(new Vector2(x + colWidth * (i + 1) - colWidth / 2, sourceButton.height + 40f + (offset ? 5f : 35f)),
+                                  new Vector2(x + colWidth * (i + 1) - colWidth / 2, sourceButton.height + 80f), Color.gray, 1);
+
                 Widgets.Label(labelRect, headerNames[i]);
+                listing = new Listing_Standard(new Rect(labelRect.x, nameRect.yMax, labelRect.width, consList.Count() * 30));
+                foreach (var c in consList.Where(cc => cc.numTotal > 0)) {                 
+                    GUI.color = Color.white;
+                    switch (i)
+                    {
+                        case 0:
+                            listing.Label(c.numTotal.ToString());
+                            break;
+                        case 1:
+                            listing.Label(c.numAdult.ToString());
+                            break;
+                        case 2:
+                            listing.Label(c.numTeen.ToString());
+                            break;
+                        case 3:
+                            listing.Label(c.numInfant.ToString());
+                            break;
+                        case 4:
+                            listing.Label(String.Format("{0:0.00}", c.totalNutr));
+                            break;
+                    }
+                }
+                switch (i)
+                {
+                    case 0:
+                        listing.Label(consList.Sum(c => c.numTotal).ToString());
+                        break;
+                    case 1:
+                        listing.Label(consList.Sum(c => c.numAdult).ToString());
+                        break;
+                    case 2:
+                        listing.Label(consList.Sum(c => c.numTeen).ToString());
+                        break;
+                    case 3:
+                        listing.Label(consList.Sum(c => c.numInfant).ToString());
+                        break;
+                    case 4:
+                        listing.Label(String.Format("{0:0.00}", consList.Sum(c => c.totalNutr)));
+                        break;
+                }
+                listing.End();
+
                 /*
                 if (Widgets.ButtonInvisible(defLabel))
                 {
@@ -391,12 +490,17 @@ namespace FoodAnalyticsTab
                     IsDirty = true;
                 }
                 //*/
+
                 TooltipHandler.TipRegion(labelRect, "ClickToSortBy" + (headerNames[i]));
                 Widgets.DrawHighlightIfMouseover(labelRect);
 
                 offset = !offset;
             }
-
+            GUI.color = new Color(1f, 1f, 1f, 0.2f);
+            for (int k = 0; k < consList.Where(c => c.numTotal > 0).Count() + 1; k++)
+            {
+                Widgets.DrawLineHorizontal(0f, nameRect.yMax + k * (Text.LineHeight + listing.verticalSpacing), rect.width);
+            }
             GUI.EndGroup();
         }
     }
