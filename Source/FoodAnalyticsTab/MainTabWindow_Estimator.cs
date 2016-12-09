@@ -174,9 +174,6 @@ namespace FoodAnalyticsTab
             numHaygrass = allHaygrass.Count();
             numHay = Find.ListerThings.AllThings.Where(x => x.def.label == "hay").Sum(x => x.stackCount);
 
-            
-            
-
             consList.Clear();
             consList.Add(new Consumer(
                 "Human",
@@ -205,7 +202,6 @@ namespace FoodAnalyticsTab
             // look at Zone_Growing class , ZoneManager class
         }
         
-
         public override void DoWindowContents(Rect inRect)
         {
             base.DoWindowContents(inRect);
@@ -266,6 +262,7 @@ namespace FoodAnalyticsTab
             rect.y += 6;
             note.text = GUI.TextArea(rect, note.text);
         }
+
         private void DisplayAnalyticsPage(Rect rect)
         {
             // constructing string
@@ -432,43 +429,99 @@ namespace FoodAnalyticsTab
             listing.End();
 
             x += 175;
-            // extra 15f offset for... what? makes labels roughly align.
             List<String> headerNames = new List<String>(){"Total","Adult","Teen","Baby", "Daily Consumption\n[nut]", "Daily Consumption[hay]"};
             var colWidth = (rect.width - x) / headerNames.Count;
             
             for (var i = 0; i < headerNames.Count; i++)
             {
-                var labelRect = new Rect(x + colWidth * i - colWidth / 2, sourceButton.height + 10 + (offset ? 10f : 40f), colWidth * 2,
-                                         30f);
+                var labelRect = new Rect(x + colWidth * i - colWidth / 2, sourceButton.height + 10 + (offset ? 10f : 40f), colWidth * 2, 30f);
                 Widgets.DrawLine(new Vector2(x + colWidth * (i + 1) - colWidth / 2, sourceButton.height + 40f + (offset ? 5f : 35f)),
                                   new Vector2(x + colWidth * (i + 1) - colWidth / 2, sourceButton.height + 80f), Color.gray, 1);
 
                 Widgets.Label(labelRect, headerNames[i]);
-                listing = new Listing_Standard(new Rect(labelRect.x, nameRect.yMax, labelRect.width, consList.Count() * 30));
+
+                //listing = new Listing_Standard(new Rect(labelRect.x, nameRect.yMax, labelRect.width, consList.Count() * (Text.LineHeight + listing.verticalSpacing)));
+                
+                switch (i)
+                {
+                    case 0:
+                        ///listing.End();
+                        listing = new Listing_Standard(new Rect(
+                                labelRect.x + labelRect.width / 2f,
+                                nameRect.yMax,
+                                consList.Max(ccc => GUI.skin.label.CalcSize(new GUIContent(ccc.numTotal.ToString())).x) + 30, // 24 + 6
+                                consList.Count() * (Text.LineHeight + listing.verticalSpacing)));
+                        break;
+                    case 1:
+                        //listing.Label(c.numAdult.ToString());
+                        listing = new Listing_Standard(new Rect(
+                                labelRect.x + labelRect.width / 2f,
+                                nameRect.yMax,
+                                consList.Max(ccc => GUI.skin.label.CalcSize(new GUIContent(ccc.numAdult.ToString())).x) + 30, // 24 + 6
+                                consList.Count() * (Text.LineHeight + listing.verticalSpacing)));
+                        break;
+                    case 2:
+                        //listing.Label(c.numTeen.ToString());
+                        listing = new Listing_Standard(new Rect(
+                                labelRect.x + labelRect.width / 2f,
+                                nameRect.yMax,
+                                consList.Max(ccc => GUI.skin.label.CalcSize(new GUIContent(ccc.numTeen.ToString())).x) + 30, // 24 + 6
+                                consList.Count() * (Text.LineHeight + listing.verticalSpacing)));
+                        break;
+                    case 3:
+                        //listing.Label(c.numInfant.ToString());
+                        listing = new Listing_Standard(new Rect(
+                                labelRect.x + labelRect.width / 2f,
+                                nameRect.yMax,
+                                consList.Max(ccc => GUI.skin.label.CalcSize(new GUIContent(ccc.numInfant.ToString())).x) + 30, // 24 + 6
+                                consList.Count() * (Text.LineHeight + listing.verticalSpacing)));
+                        break;
+                    case 4:
+                        //listing.Label(String.Format("{0:0.00}", c.totalNutr));
+                        listing = new Listing_Standard(new Rect(
+                                labelRect.x + labelRect.width / 2f,
+                                nameRect.yMax,
+                                consList.Max(ccc => GUI.skin.label.CalcSize(new GUIContent(String.Format("{0:0.00}", ccc.numAdult))).x) + 30, // 24 + 6
+                                consList.Count() * (Text.LineHeight + listing.verticalSpacing)));
+                        break;
+                    case 5:
+                        //listing.Label(String.Format("{0:0.0}", c.numFood));
+                        listing = new Listing_Standard(new Rect(
+                                labelRect.x + labelRect.width / 2f,
+                                nameRect.yMax,
+                                consList.Max(ccc => GUI.skin.label.CalcSize(new GUIContent(String.Format("{0:0.0}", ccc.numFood))).x) + 30, // 24 + 6
+                                consList.Count() * (Text.LineHeight + listing.verticalSpacing)));
+                        break;
+                    default:
+                        break;
+                }
+
+                bool buf = false;
                 foreach (var c in consList.Where(cc => cc.numTotal > 0)) {                 
                     GUI.color = Color.white;
                     switch (i)
                     {
                         case 0:
-                            listing.Label(c.numTotal.ToString());
+                            listing.CheckboxLabeled(c.numTotal.ToString(), ref buf);
                             break;
                         case 1:
-                            listing.Label(c.numAdult.ToString());
+                            listing.CheckboxLabeled(c.numAdult.ToString(), ref buf);
                             break;
                         case 2:
-                            listing.Label(c.numTeen.ToString());
+                            listing.CheckboxLabeled(c.numTeen.ToString(), ref buf);
                             break;
                         case 3:
-                            listing.Label(c.numInfant.ToString());
+                            listing.CheckboxLabeled(c.numInfant.ToString(), ref buf);
                             break;
                         case 4:
-                            listing.Label(String.Format("{0:0.00}", c.totalNutr));
+                            listing.CheckboxLabeled(String.Format("{0:0.00}", c.totalNutr), ref buf);
                             break;
                         case 5:
-                            listing.Label(String.Format("{0:0.0}", c.numFood));
+                            listing.CheckboxLabeled(String.Format("{0:0.0}", c.numFood), ref buf);
                             break;
                     }
                 }
+                // last row of total values
                 switch (i)
                 {
                     case 0:
@@ -514,7 +567,7 @@ namespace FoodAnalyticsTab
 
                 offset = !offset;
             }
-            GUI.color = new Color(1f, 1f, 1f, 0.2f);
+            GUI.color = Color.gray;
             for (int k = 0; k < consList.Where(c => c.numTotal > 0).Count() + 1; k++)
             {
                 Widgets.DrawLineHorizontal(0f, nameRect.yMax + k * (Text.LineHeight + listing.verticalSpacing), rect.width);
