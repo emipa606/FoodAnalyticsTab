@@ -159,9 +159,11 @@ namespace FoodAnalyticsTab
                 this.def = def;
             }
 
-            public void SetUpdateRule(float v0, float v)
+            int consumption0 , consumption = 0;
+            public void SetUpdateRule(int v0, int v)
             {
-
+                consumption0 = v0;
+                consumption = v;
             }
             public void GetCurrentStat()
             {
@@ -172,7 +174,6 @@ namespace FoodAnalyticsTab
                         ((Plant)h).GrowthRate / (GenDate.TicksPerDay * h.def.plant.growDays)));
                     allGrowth.Last().IsOutdoor = h.Position.GetRoomOrAdjacent().UsesOutdoorTemperature;
                 }
-                //MainTabWindow_Estimator.debug_val[0] = allGrowth.Count();
 
                 if (this.def.plant.harvestedThingDef != null)
                 {
@@ -180,6 +181,7 @@ namespace FoodAnalyticsTab
                     projectedPred.Add(new DayPred(0));
                     projectedPred.Last().stock.max = projectedPred.Last().stock.min =
                         Find.ListerThings.AllThings.Where(x => x.def.defName == this.def.plant.harvestedThingDef.defName).Sum(x => x.stackCount);
+                    projectedPred.Last().consumption.max = projectedPred.Last().consumption.min = consumption0;
                 }
             }
 
@@ -200,23 +202,18 @@ namespace FoodAnalyticsTab
                             projectedPred[0].yield.min = (int) (this.def.plant.harvestYield * 0.5f * .5f * Find.Storyteller.difficulty.cropYieldFactor);
                         }
                     }
-                    /*
-                    if (Predictor.daysUntilGrowingPeriodOver > 0)
+                    //*
+                    if (this.def.plant.harvestedThingDef.defName == "Hay")
                     {
-                        dailyHayConsumption = dailyKibbleConsumption * 2f / 5f + dailyHayConsumptionIndoorAnimals;
+                        projectedPred[0].stock.max -= projectedPred[0].consumption.max;
+                        projectedPred[0].stock.min -= projectedPred[0].consumption.min;
                     }
-                    else
-                    {
-                        dailyHayConsumption = dailyKibbleConsumption * 2f / 5f + dailyHayConsumptionRoughAnimals;
-                    }
-                    */
+                    //*/
 
                     projectedPred[0].stock.max += projectedPred[0].yield.max;
                     projectedPred[0].stock.min += projectedPred[0].yield.min;
 
                     /*
-                    projectedRecords[0].hay_stock.max -= (1 - GenDate.CurrentDayPercent) * dailyHayConsumption; // only count the rest of day
-                    projectedRecords[0].hay_stock.min -= (1 - GenDate.CurrentDayPercent) * dailyHayConsumption;
                     projectedRecords[0].meat_stock.max -= (1 - GenDate.CurrentDayPercent) * dailyKibbleConsumption * 2f / 5f; // convert every 50 kibbles to 20 meat
                     projectedRecords[0].meat_stock.min -= (1 - GenDate.CurrentDayPercent) * dailyKibbleConsumption * 2f / 5f;
                     */
@@ -241,18 +238,13 @@ namespace FoodAnalyticsTab
                                 g.Growth = Plant.BaseGrowthPercent; // if it's fully grown, replant and their growths start at 5%.
                             }
                         }
-                        /*
-                        if (day <= daysUntilGrowingPeriodOver)
-                        {
-                            dailyHayConsumption = dailyKibbleConsumption * 2f / 5f + dailyHayConsumptionIndoorAnimals;
-                        }
-                        else
-                        {
-                            dailyHayConsumption = dailyKibbleConsumption * 2f / 5f + dailyHayConsumptionRoughAnimals;
-                        }
-                        projectedRecords[day].hay_stock.max += projectedRecords[day].hay_yield.max - dailyHayConsumption;
-                        projectedRecords[day].hay_stock.min += projectedRecords[day].hay_yield.min - dailyHayConsumption;
 
+                        if (this.def.plant.harvestedThingDef.defName == "Hay")
+                        {
+                            projectedPred[day].stock.max = projectedPred[day - 1].stock.max + projectedPred[day].yield.max - consumption;// projectedPred[1].consumption.max;
+                            projectedPred[day].stock.min = projectedPred[day - 1].stock.min + projectedPred[day].yield.min - consumption;// projectedPred[1].consumption.min;
+                        }
+                        /*
                         projectedRecords[day].meat_stock.max -= dailyKibbleConsumption * 2f / 5f;
                         projectedRecords[day].meat_stock.min -= dailyKibbleConsumption * 2f / 5f;
                         */
@@ -261,7 +253,7 @@ namespace FoodAnalyticsTab
                 }
             }
 
-        };
+        }
         public Dictionary<string, PredType> allPredType = new Dictionary<string, PredType>();
 
         public Dictionary<String, bool> predictionEnable = new Dictionary<String, bool>();

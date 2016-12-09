@@ -47,7 +47,7 @@ namespace FoodAnalyticsTab
         private int lastUpdateTick = 0;
 
         // analytics
-        private float dailyHayConsumptionIndoorAnimals, dailyKibbleConsumption, dailyHayConsumption, dailyHayConsumptionRoughAnimals;
+        public float dailyHayConsumptionIndoorAnimals, dailyKibbleConsumption, dailyHayConsumption, dailyHayConsumptionRoughAnimals;
         private int numAnimals, numRoughAnimals, numKibbleAnimals, numHaygrass, numHay, numMeat, numEgg, numHen, numColonist, numHerbivoreIndoor, numHerbivoreOutdoor;
         
         private static int nextNDays = 60; // default display 25 days
@@ -160,7 +160,7 @@ namespace FoodAnalyticsTab
                       x.ageTracker.CurLifeStage.defName == "AnimalAdult").Count(); // x.def.defName == "Chicken" worked, but x.Label == "chicken" didn't work
 
             float hayNut = DefDatabase<ThingDef>.AllDefs.Where(x => x.ingestible != null && x.defName == "Hay").FirstOrDefault().ingestible.nutrition;
-            dailyHayConsumptionIndoorAnimals = roughAnimals.Where(a => a.Position.GetRoomOrAdjacent().UsesOutdoorTemperature)
+            dailyHayConsumptionIndoorAnimals = roughAnimals.Where(a => !a.Position.GetRoomOrAdjacent().UsesOutdoorTemperature)
                            .Sum(x => x.needs.food.FoodFallPerTick) * GenDate.TicksPerDay / hayNut;
             dailyHayConsumptionRoughAnimals = roughAnimals.Sum(x => x.needs.food.FoodFallPerTick) * GenDate.TicksPerDay / hayNut;
             //TODO: find animals' hunger rate when they are full instead whatever state they are in now.
@@ -174,6 +174,22 @@ namespace FoodAnalyticsTab
             numHaygrass = allHaygrass.Count();
             numHay = Find.ListerThings.AllThings.Where(x => x.def.label == "hay").Sum(x => x.stackCount);
 
+            
+
+            //*
+            if (Predictor.daysUntilGrowingPeriodOver > 0)
+            {
+                predictor.allPredType["Haygrass"].SetUpdateRule(
+                    (int) ((1 - GenDate.CurrentDayPercent) * (dailyHayConsumptionRoughAnimals + dailyKibbleConsumption * 2f / 5f)), 
+                    (int) (dailyHayConsumptionRoughAnimals + dailyKibbleConsumption * 2f / 5f));
+            }
+            else
+            {
+                predictor.allPredType["Haygrass"].SetUpdateRule(
+                    (int)((1 - GenDate.CurrentDayPercent) * (dailyHayConsumptionRoughAnimals + dailyKibbleConsumption * 2f / 5f)),
+                    (int)(dailyHayConsumptionRoughAnimals + dailyKibbleConsumption * 2f / 5f));
+            }
+            //*/
             consList.Clear();
             consList.Add(new Consumer(
                 "Human",
@@ -296,23 +312,23 @@ namespace FoodAnalyticsTab
                 i++;
             }
             */
-            
+
             /*
             foreach (var v in debug_val)
             {
                 analysis += v + ",";
             }
 
-            foreach (string s in predictor.predictionEnable.Keys)
-            {
-                analysis += s + ",";
-            }
+           
             foreach (var c in consList)
             {
                 analysis += "\ntype=" + c.label + ",infant=" + c.numInfant + ",teen=" + c.numTeen + ",adult=" + c.numAdult + ",nut=" + c.totalNutr;
             }
             //*/
-
+            foreach (string s in predictor.allPredType.Keys)
+            {
+                analysis += s + ",";
+            }
             /*
             foreach (ThingDef x in plantDef)
             {
