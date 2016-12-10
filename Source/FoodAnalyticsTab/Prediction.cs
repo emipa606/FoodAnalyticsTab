@@ -255,8 +255,7 @@ namespace FoodAnalyticsTab
 
         }
         public Dictionary<string, PredType> allPredType = new Dictionary<string, PredType>();
-
-        public Dictionary<String, bool> predictionEnable = new Dictionary<String, bool>();
+       
         private List<ThingDef> plantDefs = new List<ThingDef>();
 
         public Predictor()
@@ -264,7 +263,6 @@ namespace FoodAnalyticsTab
             plantDefs = DefDatabase<ThingDef>.AllDefs.Where(x => x.plant != null && x.plant.Sowable && x.plant.harvestedThingDef != null).ToList();
             foreach (ThingDef x in plantDefs.OrderBy(x => x.label))
             {
-                predictionEnable.Add(CultureInfo.CurrentCulture.TextInfo.ToTitleCase(x.label.ToLower()), false);
                 allPredType.Add(CultureInfo.CurrentCulture.TextInfo.ToTitleCase(x.label.ToLower()), new PredType(x));
             }
         }
@@ -297,12 +295,12 @@ namespace FoodAnalyticsTab
 
         public void EnablePrediction(List<LineChart> chartList)
         {
-            predictionEnable = predictionEnable.ToDictionary(p => p.Key, p => false);
-            foreach (LineChart c in chartList)
+            foreach (string s in allPredType.Keys)
             {
-                foreach (string s in c.setting.graphEnable.Where(x => x.Value == true).Select(x => x.Key).ToList())
+                allPredType[s].enabled = false;
+                
+                if (chartList.Where(c => c.setting.graphEnable[s] == true).Any())
                 {
-                    predictionEnable[s] = true;
                     allPredType[s].enabled = true;
                 }
             }

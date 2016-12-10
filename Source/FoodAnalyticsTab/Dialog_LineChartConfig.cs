@@ -180,8 +180,7 @@ namespace FoodAnalyticsTab
                 foreach (String s in setting.graphEnable.Keys.ToList())
                 {
                     setting.graphEnable[s] = false;
-
-                    MainTabWindow_Estimator.predictor.predictionEnable[s] = false;
+                    
                     MainTabWindow_Estimator.predictor.allPredType[s].enabled = false;
                 }
             }
@@ -191,7 +190,6 @@ namespace FoodAnalyticsTab
                 foreach (String s in setting.graphEnable.Keys.ToList())
                 {
                     setting.graphEnable[s] = true;
-                    MainTabWindow_Estimator.predictor.predictionEnable[s] = true;
                     MainTabWindow_Estimator.predictor.allPredType[s].enabled = true;
                     MainTabWindow_Estimator.predictor.MakePrediction(0); // TODO: if paused prevent calling 2nd time
                 }
@@ -209,7 +207,6 @@ namespace FoodAnalyticsTab
                 if (checkFlag != setting.graphEnable[s])
                 {
                     setting.graphEnable[s] = checkFlag;
-                    MainTabWindow_Estimator.predictor.predictionEnable[s] = checkFlag;
                     MainTabWindow_Estimator.predictor.allPredType[s].enabled = checkFlag;
   
                     MainTabWindow_Estimator.predictor.MakePrediction(0);

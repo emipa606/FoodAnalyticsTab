@@ -24,6 +24,7 @@ namespace FoodAnalyticsTab
 
     public class ChartSettings : MapComponent
     {
+        private string title = "";
         public Dictionary<String, bool> graphEnable = new Dictionary<String, bool>();
         public bool ShowDeficiency, DrawPoints, UseAntiAliasedLines, EnableLearning, EnableOutdoorAnimalDetection,
             EnableOutdoorNoGrowWinter;
@@ -33,9 +34,14 @@ namespace FoodAnalyticsTab
         {
             SetDefault();
         }
+
+        public override void ExposeData()
+        {
+            Scribe_Values.LookValue(ref this.title, "ChartTitle" + this.title);
+        }
+
         public void SetDefault()
         {
-            graphEnable = graphEnable.ToDictionary(p => p.Key, p => false); 
             ShowDeficiency = false;
             DrawPoints = false;
             UseAntiAliasedLines = true;
@@ -60,10 +66,10 @@ namespace FoodAnalyticsTab
         public bool remove = false;
         public ChartSettings setting = new ChartSettings();
 
-        public LineChart(float default_day, ref Dictionary<String, bool> s)
+        public LineChart(float default_day, ref Predictor p)
         {
             this.scrollPos_curr = this.scrollPos_prev = default_day;
-            setting.graphEnable = s;
+            setting.graphEnable = p.allPredType.ToDictionary(k => k.Key, k => false);
             setting.SetDefault();
             SetDefaultStyle();
         }

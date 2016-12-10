@@ -78,8 +78,8 @@ namespace FoodAnalyticsTab
             this.forcePause = false;
            
 
-            predictor.predictionEnable["Haygrass"] = true;
-            chartList.Add( new LineChart(nextNDays, ref predictor.predictionEnable));
+            predictor.allPredType["Haygrass"].enabled = true;
+            chartList.Add( new LineChart(nextNDays, ref predictor));
 
             NoteType getComponent = Find.Map.components.OfType<NoteType>().FirstOrDefault();
             if (getComponent == null)
@@ -354,7 +354,7 @@ namespace FoodAnalyticsTab
             Rect btn = new Rect(0, rect.yMin + 6, 110f, 40f);
             if (Widgets.ButtonText(btn, "New Chart", true, false, true))
             {
-                chartList.Add(new LineChart(60, ref predictor.predictionEnable));
+                chartList.Add(new LineChart(60, ref predictor));
             }
 
             
