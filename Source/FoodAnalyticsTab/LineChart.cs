@@ -180,6 +180,13 @@ namespace FoodAnalyticsTab
                 {
                     this.SetCurve(s + " Wood Yield(Max)", c1, predictor.allPredType[s].projectedPred.Select(x => (float)x.yield.max).ToList());
                     this.SetCurve(s + " Wood Yield(Min)", c2, predictor.allPredType[s].projectedPred.Select(x => (float)x.yield.min).ToList());
+                } else if (predictor.allPredType[s].def.plant.harvestedThingDef.defName == "Hay") {
+                    this.SetCurve("Hay Yield(Max)",
+                    c1, predictor.allPredType[s].projectedPred.Select(x => (float)x.yield.max).ToList());
+                    this.SetCurve("Hay Yield(Min)",
+                        c2, predictor.allPredType[s].projectedPred.Select(x => (float)x.yield.min).ToList());
+                    this.SetCurve("Hay Stock(Max)", Color.white, predictor.allPredType[s].projectedPred.Select(x => (float)x.stock.max).ToList());
+                    this.SetCurve("Hay Stock(Min)", Color.black, predictor.allPredType[s].projectedPred.Select(x => (float)x.stock.min).ToList());
                 }
                 else
                 {
@@ -196,7 +203,15 @@ namespace FoodAnalyticsTab
                 {
                     this.RemoveCurve(s + " Wood Yield(Max)");
                     this.RemoveCurve(s + " Wood Yield(Min)");
-                } else
+                }
+                else if (predictor.allPredType[s].def.plant.harvestedThingDef.defName == "Hay")
+                {
+                    this.RemoveCurve("Hay Yield(Max)");
+                    this.RemoveCurve("Hay Yield(Min)");
+                    this.RemoveCurve("Hay Stock(Max)");
+                    this.RemoveCurve("Hay Stock(Min)");
+                }
+                else
                 {
                     this.RemoveCurve(CultureInfo.CurrentCulture.TextInfo.ToTitleCase(predictor.allPredType[s].def.plant.harvestedThingDef.label) + " Yield(Max)");
                     this.RemoveCurve(CultureInfo.CurrentCulture.TextInfo.ToTitleCase(predictor.allPredType[s].def.plant.harvestedThingDef.label) + " Yield(Min)");
