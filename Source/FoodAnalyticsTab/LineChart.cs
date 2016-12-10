@@ -81,7 +81,7 @@ namespace FoodAnalyticsTab
             curveDrawerStyle.FixedSection = new Vector2(0, scrollPos_curr);
             curveDrawerStyle.LabelY = "#";
             curveDrawerStyle.LabelX = "Day";
-            curveDrawerStyle.UseFixedScale = false;
+            curveDrawerStyle.UseFixedScale = false; // TODO: hopefully can figure out how to have y axis adjust automatically when x axis max changes
             curveDrawerStyle.DrawBackground = true; // draw gray background behind graph
             curveDrawerStyle.DrawBackgroundLines = true; // 
             curveDrawerStyle.DrawMeasures = true;

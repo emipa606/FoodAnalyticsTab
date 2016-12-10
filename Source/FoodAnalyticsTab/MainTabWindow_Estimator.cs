@@ -300,7 +300,7 @@ namespace FoodAnalyticsTab
                             "\nEstimated number of hay needed yearly for all animals = " + (int)(dailyHayConsumption * GenDate.DaysPerMonth * GenDate.MonthsPerYear) + // 60 days
                             "\nEstimated number of hay needed until next harvest season(10th of Spring) for all animals = " + (int)(dailyHayConsumption * Predictor.daysUntilNextHarvestSeason) +
                             "\nNumber of haygrass plant = " + (int)numHaygrass + ", outdoor = " +// allHaygrassGrowth.Where(h => h.IsOutdoor).Count() +
-                            "\nNumber of haygrass needed = " + dailyHayConsumption / 20 * 10 +
+                            "\nNumber of haygrass needed = " + predictor.allPredType["Haygrass"].consumption / 20 * 10 + // /20 is yield per haygrass * 10 = 10 days growth
                             "\nEstimate of projected harvest production:\n";
             analysis += "Day\t Max Yield Min Yield Max Stock Min Stock\n";
             int i = 0;

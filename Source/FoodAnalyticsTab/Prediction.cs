@@ -159,7 +159,7 @@ namespace FoodAnalyticsTab
                 this.def = def;
             }
 
-            int consumption0 , consumption = 0;
+            public int consumption0 , consumption = 0;
             public void SetUpdateRule(int v0, int v)
             {
                 consumption0 = v0;
