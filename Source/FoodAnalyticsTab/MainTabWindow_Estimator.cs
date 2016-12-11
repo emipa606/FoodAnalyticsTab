@@ -276,7 +276,7 @@ namespace FoodAnalyticsTab
         private void DisplayNotePage(Rect rect)
         {
             rect.y += 6;
-            note.text = GUI.TextArea(rect, note.text);
+            note.text = GUI.TextArea(new Rect(rect.x, rect.y, rect.width * 0.85f , rect.height), note.text);
         }
 
         private void DisplayAnalyticsPage(Rect rect)

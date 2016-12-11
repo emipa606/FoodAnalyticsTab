@@ -185,7 +185,7 @@ namespace FoodAnalyticsTab
                 }
             }
 
-            public void update()
+            public void UpdatePrediction()
             {
                 if (enabled)
                 {
@@ -288,7 +288,7 @@ namespace FoodAnalyticsTab
                 if (allPredType[s].enabled)
                 {
                     allPredType[s].GetCurrentStat();
-                    allPredType[s].update();
+                    allPredType[s].UpdatePrediction();
                 }
             }
         }
