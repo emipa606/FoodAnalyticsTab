@@ -83,10 +83,6 @@ namespace FoodAnalyticsTab
         };
         public class PredType // should contain update rule
         {
-            public ThingDef def;
-            public bool enabled { get; set; }
-            private List<GrowthTracker> allGrowth = new List<GrowthTracker>();
-            public List<DayPred> projectedPred = new List<DayPred>();
 
             public class MinMax
             {
@@ -141,6 +137,12 @@ namespace FoodAnalyticsTab
                     this.day = day;
                 }
             }
+
+            public ThingDef def;
+            public bool enabled { get; set; }
+            private List<GrowthTracker> allGrowth = new List<GrowthTracker>();
+            public List<DayPred> projectedPred = new List<DayPred>();
+
             private bool _showDeficiency;
             public bool showDeficiency
             {
@@ -150,13 +152,15 @@ namespace FoodAnalyticsTab
                     _showDeficiency = value;
                 }
             }
-            
+
+            public string analysis { private set; get; }
 
             public PredType(ThingDef def)
             {
                 showDeficiency = false;
                 enabled = false;
                 this.def = def;
+                analysis = "";
             }
 
             public int consumption0 , consumption = 0;
@@ -168,7 +172,8 @@ namespace FoodAnalyticsTab
             public void GetCurrentStat()
             {
                 allGrowth.Clear();
-                foreach (Thing h in Find.ListerThings.AllThings.Where(x => x.def.defName == this.def.defName)) // add current growth data
+                // get current growth stats
+                foreach (Thing h in Find.ListerThings.AllThings.Where(x => x.def.defName == this.def.defName)) 
                 {
                     allGrowth.Add(new GrowthTracker(((Plant)h).Growth,
                         ((Plant)h).GrowthRate / (GenDate.TicksPerDay * h.def.plant.growDays)));
@@ -177,6 +182,7 @@ namespace FoodAnalyticsTab
 
                 if (this.def.plant.harvestedThingDef != null)
                 {
+                    // get current harvest stock
                     projectedPred.Clear();
                     projectedPred.Add(new DayPred(0));
                     projectedPred.Last().stock.max = projectedPred.Last().stock.min =
@@ -253,6 +259,33 @@ namespace FoodAnalyticsTab
                 }
             }
 
+            public void GenerateAnalysis()
+            {
+                this.analysis = 
+                            "\n\n" + this.def.defName + " Specific Stats:" +
+                            //"\nEstimated number of hay needed daily for hay-eaters only= " + (int)dailyHayConsumptionIndoorAnimals +
+                            "\nNumber of haygrass planted = " + (int)allGrowth.Count() + ", outdoor = " + allGrowth.Where(h => h.IsOutdoor).Count() +
+                            "\nEstimated haygrass needed daily = " + consumption / 20 * 10 + // /20 is yield per haygrass * 10 = 10 days growth
+                            "\nNumber of " + this.def.plant.harvestedThingDef.defName + " in stockpiles and on the floor " + projectedPred[0].stock.max +
+                            "\nNumber of days until hay in stockpiles run out = " + String.Format("{0:0.0}", (float) projectedPred[0].stock.max / (float) consumption) +
+                            "\nEstimated hay needed daily for all animals = " + (int)consumption +
+                            //"\nEstimated hay needed until winter for hay-eaters only = " + (int)(dailyHayConsumptionIndoorAnimals * Predictor.daysUntilWinter) +
+                            "\nEstimated hay needed until winter for all animals = " + (int)(consumption * Predictor.daysUntilWinter) +
+                            //"\nEstimated hay needed until the end of winter for hay-eaters only = " + (int)(dailyHayConsumptionIndoorAnimals * Predictor.daysUntilEndofWinter) +
+                            "\nEstimated hay needed until the end of winter for all animals = " + (int)(consumption * Predictor.daysUntilEndofWinter) +
+                            //"\nEstimated hay needed yearly for hay-eaters only = " + (int)(dailyHayConsumptionIndoorAnimals * GenDate.DaysPerMonth * GenDate.MonthsPerYear) + // 60 days
+                            "\nEstimated hay needed yearly for all animals = " + (int)(consumption * GenDate.DaysPerMonth * GenDate.MonthsPerYear) + // 60 days
+                            "\nEstimated hay needed until next harvest season(10th of Spring) for all animals = " + (int)(consumption * Predictor.daysUntilNextHarvestSeason) +
+                            "\n\nProjected " + this.def.plant.harvestedThingDef.defName + " production:\n";
+                
+                
+                analysis += "Day\t Max Yield Min Yield Max Stock Min Stock\n";
+                for (int i = 0; i < projectedPred.Count(); i++) 
+                {
+                    analysis += String.Format("{0,-2}\t {1,-6}\t {2,-6}\t {3,-6}\t {4,-6}\n",
+                        i, (int)projectedPred[i].yield.max, (int)projectedPred[i].yield.min, (int)projectedPred[i].stock.max, (int)projectedPred[i].stock.min);
+                }
+            }
         }
         public Dictionary<string, PredType> allPredType = new Dictionary<string, PredType>();
        

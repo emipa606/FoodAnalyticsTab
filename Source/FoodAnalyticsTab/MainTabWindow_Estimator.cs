@@ -107,6 +107,7 @@ namespace FoodAnalyticsTab
             {
                 GetInGameData();
                 predictor.MakePrediction(0);
+                predictor.allPredType["Haygrass"].GenerateAnalysis();
             }
 
             //dpList.Add(new DataPoint(GenDate.DateFullStringAt(GenTicks.TicksAbs)));
@@ -198,7 +199,8 @@ namespace FoodAnalyticsTab
                 pawns.Where(x => x.RaceProps.Humanlike && x.ageTracker.CurLifeStage.defName == "HumanlikeTeenager").Count(),
                 pawns.Where(x => x.RaceProps.Humanlike && x.ageTracker.CurLifeStage.defName == "HumanlikeAdult").Count(),
                 pawns.Where(x => x.RaceProps.Humanlike).Sum(x => x.needs.food.FoodFallPerTick) * GenDate.TicksPerDay,
-                0
+                pawns.Where(x => x.RaceProps.Humanlike).Sum(x => x.needs.food.FoodFallPerTick) * GenDate.TicksPerDay / 
+                    DefDatabase<ThingDef>.AllDefs.Where(x => x.ingestible != null && x.defName == "MealSimple").FirstOrDefault().ingestible.nutrition
                 ));
             foreach (var a in DefDatabase<ThingDef>.AllDefs.Where(x => x.race != null && x.race.Animal).OrderBy(x => x.defName))
             {
@@ -282,36 +284,22 @@ namespace FoodAnalyticsTab
         private void DisplayAnalyticsPage(Rect rect)
         {
             // constructing string
-            string analysis = "Number of animals you have = " + (int)numAnimals + ", hay animals = " + numRoughAnimals + ", kibble animals = " + numKibbleAnimals +
-                            "\nNumber of colonist = " + numColonist +
-                            "\nNumber of hay in stockpiles and on the floors = " + (int)numHay + ", number of meat = " + numMeat + ", number of egg = " + numEgg +
-                            "\nNumber of hen = " + numHen +
-                            "\nEstimated number of hay needed daily for hay-eaters only= " + (int)dailyHayConsumptionIndoorAnimals +
-                            "\nEstimated number of kibble needed for all kibble-eaters = " + (int)dailyKibbleConsumption + ", meat =" + dailyKibbleConsumption*2/5 + ", egg=" + dailyKibbleConsumption*4/50 +
-                            "\nEstimated number of hay needed daily for all animals = " + (int)dailyHayConsumption +
-                            "\nNumber of days until hay in stockpiles run out = " + String.Format("{0:0.0}", numHay / dailyHayConsumption) +
-                            "\nDays Until Winter = " + Predictor.daysUntilWinter + ", Days until growing period over = " + Predictor.daysUntilGrowingPeriodOver +
-                            ", Days until the end of winter = " + Predictor.daysUntilEndofWinter + ", Days until next harvest season = " + Predictor.daysUntilNextHarvestSeason +
-                            "\nEstimated number of hay needed until winter for hay-eaters only = " + (int)(dailyHayConsumptionIndoorAnimals * Predictor.daysUntilWinter) +
-                            "\nEstimated number of hay needed until winter for all animals = " + (int)(dailyHayConsumption * Predictor.daysUntilWinter) +
-                            "\nEstimated number of hay needed until the end of winter for hay-eaters only = " + (int)(dailyHayConsumptionIndoorAnimals * Predictor.daysUntilEndofWinter) +
-                            "\nEstimated number of hay needed until the end of winter for all animals = " + (int)(dailyHayConsumption * Predictor.daysUntilEndofWinter) +
-                            "\nEstimated number of hay needed yearly for hay-eaters only = " + (int)(dailyHayConsumptionIndoorAnimals * GenDate.DaysPerMonth * GenDate.MonthsPerYear) + // 60 days
-                            "\nEstimated number of hay needed yearly for all animals = " + (int)(dailyHayConsumption * GenDate.DaysPerMonth * GenDate.MonthsPerYear) + // 60 days
-                            "\nEstimated number of hay needed until next harvest season(10th of Spring) for all animals = " + (int)(dailyHayConsumption * Predictor.daysUntilNextHarvestSeason) +
-                            "\nNumber of haygrass plant = " + (int)numHaygrass + ", outdoor = " +// allHaygrassGrowth.Where(h => h.IsOutdoor).Count() +
-                            "\nNumber of haygrass needed = " + predictor.allPredType["Haygrass"].consumption / 20 * 10 + // /20 is yield per haygrass * 10 = 10 days growth
-                            "\nEstimate of projected harvest production:\n";
-            analysis += "Day\t Max Yield Min Yield Max Stock Min Stock\n";
-            int i = 0;
-            /*
-            foreach (Prediction k in projectedRecords)
-            {
-                analysis += String.Format("{0,-2}\t {1,-6}\t {2,-6}\t {3,-6}\t {4,-6}\n",
-                    i, (int)k.hay_yield.max, (int)k.hay_yield.min, (int)k.hay_stock.max, (int)k.hay_stock.min);
-                i++;
-            }
-            */
+            string analysis =
+                "Dates:" +
+                "\nDays Until Winter = " + Predictor.daysUntilWinter +
+                "\nDays until growing period over = " + Predictor.daysUntilGrowingPeriodOver +
+                "\nDays until the end of winter = " + Predictor.daysUntilEndofWinter +
+                "\nDays until next harvest season = " + Predictor.daysUntilNextHarvestSeason +
+
+                "\n\nGeneric Stats:" +
+                "\nNumber of animals eating hay = " + numRoughAnimals + ", Number of animals eating kibble = " + numKibbleAnimals +
+                "\nNumber of meat = " + (int)numMeat + ", number of egg = " + (int)numEgg +
+                "\nNumber of hen = " + numHen +
+                "\nEstimated number of kibble needed for all kibble-eaters = " + (int)dailyKibbleConsumption +
+                        ", meat =" + dailyKibbleConsumption * 2 / 5 +
+                        ", egg=" + dailyKibbleConsumption * 4 / 50 +
+                predictor.allPredType["Haygrass"].analysis;
+            
 
             /*
             foreach (var v in debug_val)
@@ -319,17 +307,13 @@ namespace FoodAnalyticsTab
                 analysis += v + ",";
             }
 
-           
-            foreach (var c in consList)
-            {
-                analysis += "\ntype=" + c.label + ",infant=" + c.numInfant + ",teen=" + c.numTeen + ",adult=" + c.numAdult + ",nut=" + c.totalNutr;
-            }
             //*/
+
+            /*
             foreach (string s in predictor.allPredType.Keys)
             {
                 analysis += s + ",";
             }
-            /*
             foreach (ThingDef x in plantDef)
             {
                 analysis += x.defName + ",";
@@ -445,19 +429,21 @@ namespace FoodAnalyticsTab
             listing.End();
 
             x += 175;
-            List<String> headerNames = new List<String>(){"Total","Adult","Teen","Baby", "Daily Consumption\n[nut]", "Daily Consumption[hay]"};
+            List<String> headerNames = new List<String>(){"Total","Adult","Teen","Baby", "Daily Consumption[nut]", "Daily Meals/Hay/Kibbles"};
             var colWidth = (rect.width - x) / headerNames.Count;
             
+            // loop from left column to rightmost column
             for (var i = 0; i < headerNames.Count; i++)
             {
+                // draw title in each column
                 var labelRect = new Rect(x + colWidth * i - colWidth / 2, sourceButton.height + 10 + (offset ? 10f : 40f), colWidth * 2, 30f);
                 Widgets.DrawLine(new Vector2(x + colWidth * (i + 1) - colWidth / 2, sourceButton.height + 40f + (offset ? 5f : 35f)),
                                   new Vector2(x + colWidth * (i + 1) - colWidth / 2, sourceButton.height + 80f), Color.gray, 1);
 
                 Widgets.Label(labelRect, headerNames[i]);
 
+                // setting drawing rect for each column
                 //listing = new Listing_Standard(new Rect(labelRect.x, nameRect.yMax, labelRect.width, consList.Count() * (Text.LineHeight + listing.verticalSpacing)));
-                
                 switch (i)
                 {
                     case 0:
@@ -512,6 +498,7 @@ namespace FoodAnalyticsTab
                         break;
                 }
 
+                // draw stats in each column below the title
                 bool buf = false;
                 foreach (var c in consList.Where(cc => cc.numTotal > 0)) {                 
                     GUI.color = Color.white;
