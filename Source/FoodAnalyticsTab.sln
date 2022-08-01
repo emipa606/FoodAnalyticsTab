@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.23107.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Food Analytics Tab", "Food Analytics Tab.csproj", "{D0516023-126C-450F-B919-A75C5C4DC488}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Food Analytics Tab", "FoodAnalyticsTab\Food Analytics Tab.csproj", "{D0516023-126C-450F-B919-A75C5C4DC488}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

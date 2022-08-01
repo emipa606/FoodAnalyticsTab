@@ -1,0 +1,7 @@
+E:\SteamLibrary\steamapps\common\RimWorld\Mods\FoodAnalyticsTab\1.3\Assemblies\Food Analytics Tab.dll
+E:\SteamLibrary\steamapps\common\RimWorld\Mods\FoodAnalyticsTab\Source\FoodAnalyticsTab\obj\Release\Food Analytics Tab.csproj.AssemblyReference.cache
+E:\SteamLibrary\steamapps\common\RimWorld\Mods\FoodAnalyticsTab\Source\FoodAnalyticsTab\obj\Release\Food Analytics Tab.GeneratedMSBuildEditorConfig.editorconfig
+E:\SteamLibrary\steamapps\common\RimWorld\Mods\FoodAnalyticsTab\Source\FoodAnalyticsTab\obj\Release\Food Analytics Tab.AssemblyInfoInputs.cache
+E:\SteamLibrary\steamapps\common\RimWorld\Mods\FoodAnalyticsTab\Source\FoodAnalyticsTab\obj\Release\Food Analytics Tab.AssemblyInfo.cs
+E:\SteamLibrary\steamapps\common\RimWorld\Mods\FoodAnalyticsTab\Source\FoodAnalyticsTab\obj\Release\Food Analytics Tab.csproj.CoreCompileInputs.cache
+E:\SteamLibrary\steamapps\common\RimWorld\Mods\FoodAnalyticsTab\Source\FoodAnalyticsTab\obj\Release\Food Analytics Tab.dll

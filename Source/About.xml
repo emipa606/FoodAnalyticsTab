@@ -1,0 +1,8 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ModMetaData>
+  <name>Food Analytics Tab</name>
+  <author>mugenzebra</author>
+  <targetVersion>0.15.1280</targetVersion>
+  <description>This mod adds a new tab that shows estimated yield and consumption of crops and food.
+ </description>
+</ModMetaData>

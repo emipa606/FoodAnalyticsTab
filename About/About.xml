@@ -1,8 +1,50 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <ModMetaData>
-  <name>Food Analytics Tab</name>
+  <name>Food Analytics Tab (Continued)</name>
+  <packageId>Mlie.FoodAnalyticsTab</packageId>
   <author>mugenzebra</author>
-  <targetVersion>0.15.1280</targetVersion>
-  <description>This mod adds a new tab that shows estimated yield and consumption of crops and food.
-  </description>
+  <url>https://github.com/emipa606/FoodAnalyticsTab</url>
+  <supportedVersions>
+    <li>1.3</li>
+  </supportedVersions>
+  <modDependencies />
+  <loadAfter />
+  <description>[img]https://i.imgur.com/buuPQel.png[/img]
+Update of mugenzebras mod
+https://github.com/mugenZebra/Food-Analytics-Tab
+
+[img]https://i.imgur.com/pufA0kM.png[/img]
+
+[table]
+    [tr]
+        [td][url=https://invite.gg/Mlie][img]https://i.imgur.com/zdzzBrc.png[/img][/url][/td]
+        [td][url=https://github.com/emipa606/FoodAnalyticsTab][img]https://i.imgur.com/kTkpTOE.png[/img][/url][/td]
+    [/tr]
+[/table]
+	
+[img]https://i.imgur.com/Z4GOv8H.png[/img]
+
+[h1]How I started[/h1]
+I personally play Rimworld like farmville, and I found managing animals are hard, especially once I started raising about 200 animals. 
+So I created this mod to help alleviating the efforts of managing animals, as of now (will add some numbers for colonists later). 
+This mod shows calculations and graphs in a tab, where there are two sub-tabs, one showing a graph containing projected estimates of yields and stocks for a number of days, which is adjustable through the horizontal slider, up to 60 days; the other tab has more verbose calculations, you can take a look at the screenshot. 
+
+My personal best record on the number of animals I can feed is around 600, and it was with the help with my mod.
+
+[h1]Usage[/h1]
+This mod is built based on the assumption of feeding herbivores with hay and feeding carnivores/omnivores with kibbles. 
+All estimated yields and consumption are based on real-time states of the crops and animals. 
+So to get the best estimated value, for example for crops grown outdoor, it's better to wait until light is 100%, which is usually around 9-10AM. 
+For animals, hunger rates will be much slower if they are hungry, urgently hungry or starving; animals eat whenever they feel hungry, so animals' hunger rate will mostly stay at their maximum values if food is enough. 
+We will take this as an assumption and use their maximum hunger rates as the basis for our projected consumption rate. 
+To obtain the best calculation, it's simply better to wait until all animals are fed, perhaps around 9AM, based on my personal experience.
+On top of the graph, there are dots that indicate the important dates. 
+You can hover over them to see descriptions. One important date I consider is the end date of growing season. 
+Once when growing season is over, crops grown outside won't grow, this is not taking into account fully yet, but once the cold season hits, you won't be able to see much yields. 
+This suffices for my personal usage at least.
+There's a horizontal slider at the bottom of the graph tab. 
+It allows changing number of days to be graphed and calculated, from 1 to 60 days.
+
+License: MIT
+</description>
 </ModMetaData>

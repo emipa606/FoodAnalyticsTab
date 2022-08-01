@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "d+fbLlIq8X0jINrf6jMmU18Ibdaz+Zzd71e+ca/dupLQ1uSwWehOB0dVfgiTXRljcZpdPEESE/iAbMX8nbu34g==",
+  "success": true,
+  "projectFilePath": "E:\\SteamLibrary\\steamapps\\common\\RimWorld\\Mods\\FoodAnalyticsTab\\Source\\FoodAnalyticsTab\\Food Analytics Tab.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\inade\\.nuget\\packages\\krafs.rimworld.ref\\1.3.3389\\krafs.rimworld.ref.1.3.3389.nupkg.sha512"
+  ],
+  "logs": []
+}

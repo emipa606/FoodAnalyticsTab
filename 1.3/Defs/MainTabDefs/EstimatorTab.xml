@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+  <MainButtonDef>
+    <defName>EstimatorTab</defName>
+    <label>Estimator</label>
+    <description>Estimate amount of food needed</description>
+    <tabWindowClass>FoodAnalyticsTab.MainTabWindow_Estimator</tabWindowClass>
+    <order>43</order>
+    <minimized>True</minimized>
+    <iconPath>UI/FoodAnalyzer</iconPath>
+  </MainButtonDef>
+</Defs>
